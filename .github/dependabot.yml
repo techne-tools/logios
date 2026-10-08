@@ -30,6 +30,22 @@ updates:
   # Bumps the `uses:` pins in .github/workflows/ so the forks and actions
   # pinned there do not rot silently. Without this, a pinned workflow ref
   # sits still until something breaks.
+  #
+  # These PRs are merged BY HAND. There is no automatic path for them:
+  #
+  #   - `auto-merge` is NOT a `dependabot.yml` option (verified against the
+  #     full Dependabot options reference — the key does not exist), so it
+  #     cannot be declared here.
+  #   - `dependabot-auto-merge.yml` cannot cover them either: github-actions
+  #     bumps carry no `dependabot/fetch-metadata` update-type, so its
+  #     `version-update:semver-*` condition never matches.
+  #   - GitHub's native auto-merge is unsafe here: `gh pr merge --auto` merges
+  #     immediately when the base branch has no required status checks, and
+  #     this repository protects no branches.
+  #
+  # Revisit if the volume becomes annoying — the honest options are to protect
+  # the branch (making native auto-merge safe) or to add an explicit
+  # github-actions step to the workflow.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
