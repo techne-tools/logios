@@ -10,7 +10,7 @@ Zotero plugins use:
 
 - **XUL/XHTML**: Native UI framework (Firefox-based)
 - **TypeScript**: Core logic (bundled via esbuild)
-- **React 18**: For complex interactive components (chat UI)
+- **React 19**: For complex interactive components (chat UI)
 - **zotero-plugin-toolkit**: Helper library for UI, menus, preferences
 - **zotero-plugin-scaffold**: Build system with hot reload
 

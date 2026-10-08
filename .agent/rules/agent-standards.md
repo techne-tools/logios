@@ -6,7 +6,7 @@ conflict, flag the conflict — do not silently pick a side.
 
 ## 1. Sandbox Constraints (non-negotiable)
 
-Zotero plugins run in a **Firefox 115 ESR sandbox**:
+Zotero plugins run in a **Firefox 140 ESR sandbox** (Zotero 10; was 115 ESR in Zotero 9):
 
 - **Synthetic event boundaries** — `onChange` and `onKeyDown` on text inputs do
   not fire reliably in Mozilla privileged chrome contexts. Use native

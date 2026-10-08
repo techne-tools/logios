@@ -137,7 +137,7 @@ for (const ann of annotations) {
 ## React Component in Zotero
 
 ```typescript
-// Mount React 18 in XUL container
+// Mount React 19 in XUL container
 import { createRoot } from "react-dom/client";
 
 const container = doc.createElement("div");

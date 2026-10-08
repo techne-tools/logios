@@ -1,7 +1,7 @@
 # Hermes Agent for Zotero
 
 [![zotero target version](https://img.shields.io/badge/Zotero-7.0+-green?style=flat-square&logo=zotero&logoColor=CC2936)](https://www.zotero.org)
-[![Version](https://img.shields.io/badge/version-0.4.0-blue?style=flat-square)](./package.json)
+[![Version](https://img.shields.io/badge/version-0.5.0-blue?style=flat-square)](./package.json)
 
 A Zotero plugin that integrates the [Hermes Agent](https://github.com/nousresearch/hermes) directly into your research workflow. Chat with an AI assistant that has full context of your Zotero library — no copy-pasting, no context switching.
 
@@ -35,7 +35,7 @@ A Zotero plugin that integrates the [Hermes Agent](https://github.com/nousresear
 ┌─────────────────────────────────────────┐
 │  Zotero Main Window                     │
 │  ┌─────────────────────────────────────┐  │
-│  │  Hermes Chat Tab (React 18)       │  │
+│  │  Hermes Chat Tab (React 19)       │  │
 │  │  ┌─────────────────────────────┐  │  │
 │  │  │  Messages (MarkdownRenderer)│  │  │
 │  │  │  Input + Send Button        │  │  │

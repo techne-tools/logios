@@ -82,7 +82,7 @@ Each module has a single, well-defined responsibility:
 
 ## React Conventions
 
-- Use **React 18 `createRoot()`** (not legacy `ReactDOM.render`)
+- Use **React 19 `createRoot()`** (not legacy `ReactDOM.render`)
 - Mount roots in XUL `<div>` containers
 - Use **native DOM event listeners** when React synthetic events are unreliable (Zotero sandbox)
 - Store unmount functions on the container element: `container._unmount = () => root.unmount()`

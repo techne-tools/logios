@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented in this file.
 
-## [Unreleased]
+## [0.5.0] — 2026-10-08
 
 ### Added
 
@@ -71,6 +71,19 @@ All notable changes to this project are documented in this file.
   bumping `react` to 19 needs `@types/react@19` while the branch still carried
   `@types/react-dom@18`, which peers on `@types/react@^18`.
 - README and ARCHITECTURE security notes updated for profile scoping.
+- React 18.3.1 → 19.3.0 (`react`, `react-dom`, `@types/react`,
+  `@types/react-dom`, bumped together). React 19's types changed
+  `RefObject<T>` to `{ current: T | null }`, so six view-component prop
+  signatures were widened to match the `useRef<T>(null)` values already
+  being passed — no runtime behaviour change. The plugin bundles its own
+  React (esbuild `bundle: true`), so this does not interact with any React
+  copy inside Zotero.
+- The external-prompt buffer's comments no longer attribute the race to
+  React 18. The delay between `createRoot().render()` returning and the
+  subscription effect running is inherent to `render()`'s contract, not to
+  a version (measured: 1–5 ms under 18.3.1, 5–20 ms under 19.3.0 — React 19
+  defers effects _later_, making the buffer slightly more necessary, not
+  less). Logic unchanged.
 
 ## [0.4.0] — 2026-10-04
 

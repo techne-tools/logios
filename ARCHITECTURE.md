@@ -8,7 +8,7 @@ structured today. When it disagrees with DESIGN.md, flag the conflict.
 - **Host:** Zotero 7–10 (Mozilla 140 ESR / Firefox ESR sandbox)
 - **Language:** TypeScript (strict), bundled by esbuild via
   zotero-plugin-scaffold
-- **UI:** React 18 (chat), XUL/XHTML (native panels)
+- **UI:** React 19 (chat), XUL/XHTML (native panels)
 - **Toolkit:** zotero-plugin-toolkit
 
 ## Module Map
