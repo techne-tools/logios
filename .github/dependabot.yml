@@ -31,25 +31,37 @@ updates:
   # pinned there do not rot silently. Without this, a pinned workflow ref
   # sits still until something breaks.
   #
-  # These PRs are merged BY HAND. There is no automatic path for them:
+  # Merge path: GitHub's NATIVE auto-merge, armed by
+  # `dependabot-auto-merge.yml` (which also excludes these PRs from its own
+  # polling path, because github_actions has no dependable fetch-metadata
+  # update-type). Native auto-merge completes only once the branch's required
+  # status checks pass, and `main` is protected — so this cannot land a red
+  # build.
   #
-  #   - `auto-merge` is NOT a `dependabot.yml` option (verified against the
-  #     full Dependabot options reference — the key does not exist), so it
-  #     cannot be declared here.
-  #   - `dependabot-auto-merge.yml` cannot cover them either: github-actions
-  #     bumps carry no `dependabot/fetch-metadata` update-type, so its
-  #     `version-update:semver-*` condition never matches.
-  #   - GitHub's native auto-merge is unsafe here: `gh pr merge --auto` merges
-  #     immediately when the base branch has no required status checks, and
-  #     this repository protects no branches.
+  # `auto-merge` is NOT a valid key here (verified against the full Dependabot
+  # options reference), and `gh pr merge --auto` merges immediately when the
+  # base branch has NO required checks — which is precisely why `main` is
+  # protected and why that protection is load-bearing for this path. Do not
+  # disable it without also removing the native auto-merge step.
   #
-  # Revisit if the volume becomes annoying — the honest options are to protect
-  # the branch (making native auto-merge safe) or to add an explicit
-  # github-actions step to the workflow.
+  # Majors are ignored below, so only patch/minor updates arrive.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    ignore:
+      # Majors on a workflow ref usually need code changes (upstream breaking
+      # changes), so they must be deliberate. Dependabot's own `update-types`
+      # vocabulary is the place to express this — not guesswork about what
+      # `fetch-metadata` reports for github_actions.
+      #
+      # Trade-off: this also suppresses *security* updates for a major, so the
+      # pinned fork/actions will not auto-patch across a major boundary. Check
+      # `gh api repos/OWNER/REPO/releases` periodically, or drop this block and
+      # merge majors by hand when they appear.
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
     groups:
       github-actions:
         patterns:
