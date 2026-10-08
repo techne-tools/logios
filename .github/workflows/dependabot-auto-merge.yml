@@ -1,16 +1,18 @@
-# Dependabot auto-merge for patch + minor bumps.
+# Dependabot auto-merge.
 #
-# Note on scope: this file is only half the control. The `Merge patch + minor`
-# step below is the SECOND gate — it is deliberately a no-op for updates the
-# ecosystem does not route here:
+# Two ecosystems, two paths — they must stay mutually exclusive:
 #
-#   - github-actions bumps carry no `dependabot/fetch-metadata` update-type, so
-#     `version-update:semver-*` never matches and the step is skipped. They land
-#     via GitHub's native Dependabot auto-merge when `dependabot.yml` opts in
-#     with `auto-merge: true` — keep the two in sync.
-#   - npm bumps reach this workflow and are classified by metadata.
+#   npm            -> the polling step below merges patch + minor once CI is green.
+#   github-actions -> that polling step is explicitly EXCLUDED (see its `if:`),
+#                     because github_actions carries no dependable
+#                     `fetch-metadata` update-type (verified: the string
+#                     "github_actions" appears nowhere in fetch-metadata's
+#                     source or tests). Instead we hand the PR to GitHub's
+#                     native auto-merge, which completes only once the branch's
+#                     required status checks pass. Majors never reach either
+#                     path — dependabot.yml `ignore`s them at the source.
 #
-# Why this does NOT use `gh pr checks --watch`:
+# Why this does NOT use `gh pr checks --watch` for the npm path:
 #
 #   `gh pr checks` lists EVERY check on the PR — including this job's own
 #   check-run ("auto-merge"). `--watch` therefore waits for a check that can
@@ -51,8 +53,30 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
+      # github-actions bumps: no polling. Native auto-merge waits on the
+      # branch's required status checks itself, so this cannot land a red
+      # build — and it cannot self-deadlock, because GitHub evaluates the
+      # required checks rather than this job's own check-run.
+      #
+      # `allow_auto_merge` must be enabled on the repository for this to work;
+      # `gh pr merge --auto` errors if it is not.
+      #
+      # Caveat worth knowing: the required checks (build, lint, test) exercise
+      # ci.yml only. A bump to a pin used solely by release.yml or issue-bot.yml
+      # is therefore not covered by them, and would land unverified.
+      - name: Enable auto-merge for github-actions bumps
+        if: steps.metadata.outputs.package-ecosystem == 'github_actions'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          set -uo pipefail
+          gh pr merge --squash --auto "$PR_URL"
+
       - name: Merge patch + minor updates once CI is green
-        if: contains(fromJSON('["version-update:semver-patch", "version-update:semver-minor"]'), steps.metadata.outputs.update-type)
+        if: >
+          steps.metadata.outputs.package-ecosystem != 'github_actions' &&
+          contains(fromJSON('["version-update:semver-patch", "version-update:semver-minor"]'), steps.metadata.outputs.update-type)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_URL: ${{ github.event.pull_request.html_url }}
@@ -115,7 +139,9 @@ jobs:
           done
 
       - name: Comment on major updates (manual review required)
-        if: steps.metadata.outputs.update-type == 'version-update:semver-major'
+        if: >
+          steps.metadata.outputs.package-ecosystem != 'github_actions' &&
+          steps.metadata.outputs.update-type == 'version-update:semver-major'
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
