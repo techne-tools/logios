@@ -27,3 +27,4 @@ hermes_stdout.txt
 *.swp
 *.swo
 .antigravitycli/
+.worktrees/
