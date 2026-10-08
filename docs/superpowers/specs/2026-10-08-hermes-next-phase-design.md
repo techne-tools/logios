@@ -54,8 +54,8 @@ in `extensions.zotero.hermes.apiKey` (plaintext profile pref). Close the gap.
 
 - **New `src/utils/SecretVault.ts`**: `setSecret(name, value)`,
   `getSecret(name): string | null`, `deleteSecret(name)`, `listSecrets(): string[]`.
-  Storage: `<profile>/hermes/hermes-secrets.json` (ruling 2026-10-08: inside the
-  existing `hermes/` profile subdir, which `zoteroPaths` helpers already manage —
+  Storage: `<profile>/zotero-hermes/hermes-secrets.json` (ruling amended 2026-10-08: inside the
+  existing `zotero-hermes/` profile subdir (same dir as all other plugin data: conversations, workspace), which `zoteroPaths` `ensureHermesDir` already manages —
   the original `<profile>/hermes-secrets.json` root path was spec-authored, not
   operator-set), created `0o600`, written via `putContentsAsync` (async variants
   unless unavailable in the runtime). Values held in-memory for the session. Never logged.
