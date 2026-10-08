@@ -280,5 +280,3 @@ See [TODO.md](./TODO.md) for detailed implementation plan and feature backlog.
 - Built with [zotero-plugin-template](https://github.com/windingwind/zotero-plugin-template) by windingwind
 - Uses [zotero-plugin-toolkit](https://github.com/windingwind/zotero-plugin-toolkit) for Zotero API integration
 - Hermes Agent by [Nous Research](https://nousresearch.com)
-
-<!-- probe: native auto-merge end-to-end test -->
