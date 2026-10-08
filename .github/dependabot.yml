@@ -26,3 +26,15 @@ updates:
           - "react-dom"
           - "@types/react"
           - "@types/react-dom"
+
+  # Bumps the `uses:` pins in .github/workflows/ so the forks and actions
+  # pinned there do not rot silently. Without this, a pinned workflow ref
+  # sits still until something breaks.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
