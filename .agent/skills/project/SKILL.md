@@ -1,11 +1,11 @@
 ---
 name: project
-description: Project-specific architecture, maintenance tasks, and unique conventions for the Zotero Hermes plugin. Load when performing project-wide maintenance or working with the core architecture.
+description: Project-specific architecture, maintenance tasks, and unique conventions for the Logios plugin. Load when performing project-wide maintenance or working with the core architecture.
 ---
 
 # Project Context
 
-This skill provides the unique context and architectural details for the Zotero Hermes plugin repository.
+This skill provides the unique context and architectural details for the Logios plugin repository.
 
 ## Purpose
 
@@ -33,7 +33,7 @@ Load this skill when:
 ### Plugin Structure
 
 ```
-Zotero Hermes Plugin
+Logios Plugin
 ├── Core Layer
 │   ├── HermesClient.ts      # ACP protocol communication
 │   ├── ChatManager.ts       # Conversation state

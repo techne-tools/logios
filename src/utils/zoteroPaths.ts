@@ -59,7 +59,7 @@ export function ensureHermesDir(
     }
     return dir.path;
   } catch (e) {
-    addon?.log(`[zoteroPaths] Failed to create zotero-hermes/${folder}:`, e);
+    addon?.log(`[zoteroPaths] Failed to create logios/${folder}:`, e);
     return "";
   }
 }

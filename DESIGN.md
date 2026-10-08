@@ -1,4 +1,4 @@
-# DESIGN — Hermes Agent for Zotero
+# DESIGN — Logios
 
 **Design north star.** This document is the target state for the plugin's
 design. When code and this document disagree, flag the conflict — do not

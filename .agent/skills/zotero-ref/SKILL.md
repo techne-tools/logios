@@ -142,7 +142,7 @@ Two related API facts worth remembering:
 ```json
 {
   "manifest_version": 2,
-  "name": "Hermes Agent for Zotero",
+  "name": "Logios",
   "version": "0.1.0",
   "description": "AI-powered research assistant",
   "author": "techne-tools",

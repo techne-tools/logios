@@ -1,4 +1,4 @@
-# ARCHITECTURE — Hermes Agent for Zotero
+# ARCHITECTURE — Logios
 
 **Current code reality.** This document describes how the code is actually
 structured today. When it disagrees with DESIGN.md, flag the conflict.

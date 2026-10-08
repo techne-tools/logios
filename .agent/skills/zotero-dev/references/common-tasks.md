@@ -1,5 +1,5 @@
 <!--
-Source: Based on the zotero-hermes codebase, windingwind's zotero-plugin-template, and daily development workflows
+Source: Based on the logios codebase, windingwind's zotero-plugin-template, and daily development workflows
 -->
 
 # Common Tasks

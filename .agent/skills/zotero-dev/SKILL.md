@@ -9,7 +9,7 @@ This skill provides patterns and rules for developing Zotero plugins with the He
 
 ## Purpose
 
-To ensure consistent development across the Zotero Hermes plugin, proper code organization, and adherence to Zotero's development patterns.
+To ensure consistent development across the Logios plugin, proper code organization, and adherence to Zotero's development patterns.
 
 ## Scope
 

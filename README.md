@@ -1,4 +1,4 @@
-# Hermes Agent for Zotero
+# Logios
 
 [![zotero target version](https://img.shields.io/badge/Zotero-7.0+-green?style=flat-square&logo=zotero&logoColor=CC2936)](https://www.zotero.org)
 [![Version](https://img.shields.io/badge/version-0.5.0-blue?style=flat-square)](./package.json)
@@ -98,8 +98,8 @@ under Zotero 9) with significant React limitations:
 ### Build from Source
 
 ```bash
-git clone https://github.com/techne-tools/zotero-hermes.git
-cd zotero-hermes
+git clone https://github.com/techne-tools/logios.git
+cd logios
 npm install
 npm run build
 ```

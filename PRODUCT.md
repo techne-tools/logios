@@ -1,4 +1,4 @@
-# PRODUCT — Hermes Agent for Zotero
+# PRODUCT — Logios
 
 **Product intent.** What this plugin is for, who it serves, and what it is
 not. This is the product north star; DESIGN.md is the design north star.

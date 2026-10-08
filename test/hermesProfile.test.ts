@@ -126,7 +126,7 @@ describe("HermesProfile", function () {
 
   describe("isValidProfileName", function () {
     it("accepts the names the CLI accepts", function () {
-      expect(isValidProfileName("zotero-hermes")).to.equal(true);
+      expect(isValidProfileName("logios")).to.equal(true);
       expect(isValidProfileName("enodios")).to.equal(true);
       expect(isValidProfileName("coder_2")).to.equal(true);
       expect(isValidProfileName("a")).to.equal(true);
@@ -146,7 +146,7 @@ describe("HermesProfile", function () {
 
   describe("profileExists", function () {
     it("is true for a real profile directory", function () {
-      expect(profileExists("zotero-hermes", base)).to.equal(true);
+      expect(profileExists("logios", base)).to.equal(true);
       expect(profileExists("enodios", base)).to.equal(true);
     });
 
@@ -159,7 +159,7 @@ describe("HermesProfile", function () {
     });
 
     it("is false without a home directory", function () {
-      expect(profileExists("zotero-hermes", "")).to.equal(false);
+      expect(profileExists("logios", "")).to.equal(false);
     });
 
     it("is false for a malformed name", function () {
@@ -167,7 +167,7 @@ describe("HermesProfile", function () {
     });
 
     it("tolerates a trailing slash on the home directory", function () {
-      expect(profileExists("zotero-hermes", `${base}/`)).to.equal(true);
+      expect(profileExists("logios", `${base}/`)).to.equal(true);
     });
   });
 
@@ -178,8 +178,8 @@ describe("HermesProfile", function () {
     });
 
     it("returns the name when the profile exists", function () {
-      expect(resolveHermesProfile("zotero-hermes", base)).to.equal(
-        "zotero-hermes",
+      expect(resolveHermesProfile("logios", base)).to.equal(
+        "logios",
       );
     });
 
@@ -196,8 +196,8 @@ describe("HermesProfile", function () {
     });
 
     it("trims surrounding whitespace from a pasted name", function () {
-      expect(resolveHermesProfile("  zotero-hermes  ", base)).to.equal(
-        "zotero-hermes",
+      expect(resolveHermesProfile("  logios  ", base)).to.equal(
+        "logios",
       );
     });
   });
@@ -213,7 +213,7 @@ describe("HermesProfile", function () {
     });
 
     it("reports a profile when the name is valid and exists", function () {
-      expect(resolveConfiguredProfile("zotero-hermes", base)).to.deep.equal({
+      expect(resolveConfiguredProfile("logios", base)).to.deep.equal({
         kind: "profile",
         name: "zotero-hermes",
       });
@@ -246,9 +246,9 @@ describe("HermesProfile", function () {
     });
 
     it("reports invalid when no hermes home is known", function () {
-      expect(resolveConfiguredProfile("zotero-hermes", "")).to.deep.equal({
+      expect(resolveConfiguredProfile("logios", "")).to.deep.equal({
         kind: "invalid",
-        requested: "zotero-hermes",
+        requested: "logios",
       });
     });
   });
@@ -260,7 +260,7 @@ describe("HermesProfile", function () {
     });
 
     it("is silent for a usable profile", function () {
-      expect(describeProfileProblem("zotero-hermes", base)).to.equal(null);
+      expect(describeProfileProblem("logios", base)).to.equal(null);
     });
 
     it("names the requested profile and the recovery command", function () {
@@ -277,9 +277,9 @@ describe("HermesProfile", function () {
     });
 
     it("scopes the run with -p before the subcommand", function () {
-      expect(buildAcpArguments("zotero-hermes")).to.deep.equal([
+      expect(buildAcpArguments("logios")).to.deep.equal([
         "-p",
-        "zotero-hermes",
+        "logios",
         "acp",
       ]);
     });

@@ -1,5 +1,5 @@
 <!--
-Source: Based on Zotero plugin development guidelines, windingwind's zotero-plugin-template docs, and the zotero-hermes codebase
+Source: Based on Zotero plugin development guidelines, windingwind's zotero-plugin-template docs, and the logios codebase
 -->
 
 # Plugin Guidelines

@@ -25,7 +25,7 @@ export function buildSystemPrompt(opts: {
   const persona = opts.persona || "default";
   const personaPrompt = buildPersonaPrompt(persona);
 
-  return `${personaPrompt}You are the Hermes Agent for Zotero. Your primary focus is the user's Zotero research library.
+  return `${personaPrompt}You are Logios, the Logios. Your primary focus is the user's Zotero research library.
 
 ZOTERO LIBRARY ACCESS:
 - Zotero data directory: ${opts.zoteroDataDir}

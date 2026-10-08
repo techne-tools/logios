@@ -1,5 +1,5 @@
 <!--
-Source: Based on the zotero-hermes codebase, Zotero preference system, and zotero-plugin-toolkit
+Source: Based on the logios codebase, Zotero preference system, and zotero-plugin-toolkit
 -->
 
 # Commands & Settings

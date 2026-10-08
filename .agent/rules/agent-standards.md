@@ -1,4 +1,4 @@
-# Zotero Hermes — Agent Standards
+# Logios — Agent Standards
 
 These rules apply to every AI agent working in this repository. They are
 the contract between the repo and the harness. When a rule and a task

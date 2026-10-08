@@ -1,10 +1,10 @@
 <!--
-Source: Based on the zotero-hermes codebase, zotero-plugin-toolkit, and Zotero API patterns
+Source: Based on the logios codebase, zotero-plugin-toolkit, and Zotero API patterns
 -->
 
 # Code Patterns
 
-Complete, production-ready patterns for Zotero Hermes plugin development.
+Complete, production-ready patterns for Logios plugin development.
 
 ## Plugin Instance Setup (`src/index.ts`)
 

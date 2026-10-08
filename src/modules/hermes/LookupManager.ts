@@ -86,7 +86,7 @@ export interface LookupOptions {
 }
 
 const USER_AGENT =
-  "hermes-zotero/0.4 (https://github.com/techne-tools/zotero-hermes)";
+  "hermes-zotero/0.4 (https://github.com/techne-tools/logios)";
 
 /**
  * Map a CrossRef/DataCite `type` to a Zotero item type.

@@ -1,5 +1,5 @@
 <!--
-Source: Based on TypeScript best practices, Zotero plugin conventions, and the zotero-hermes codebase
+Source: Based on TypeScript best practices, Zotero plugin conventions, and the logios codebase
 -->
 
 # Coding Conventions

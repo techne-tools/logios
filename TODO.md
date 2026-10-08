@@ -1,4 +1,4 @@
-# Zotero Hermes Plugin — Full Rework TODO
+# Logios Plugin — Full Rework TODO
 
 **Created:** 21 May 2026  
 **Updated:** 8 October 2026  
@@ -331,7 +331,7 @@
 - **API Server mode added**: New `HermesApiClient.ts` connects to `hermes gateway` via HTTP `/v1/chat/completions` with SSE streaming. Same interface as ACP client.
 - **Preferences UI added**: Full settings panel with connection mode dropdown, dynamic fields for binary path / API URL / API key, and general settings toggles.
 
-All features must follow Zotero Hermes coding conventions.
+All features must follow Logios coding conventions.
 
 - TypeScript strict mode must be maintained
 - Security considerations: approval system for note modifications

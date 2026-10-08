@@ -1,5 +1,5 @@
 <!--
-Source: Based on Zotero plugin development best practices, windingwind's zotero-plugin-toolkit, and the zotero-hermes codebase
+Source: Based on Zotero plugin development best practices, windingwind's zotero-plugin-toolkit, and the logios codebase
 -->
 
 # Agent Do/Don't

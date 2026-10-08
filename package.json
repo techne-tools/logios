@@ -1,10 +1,10 @@
 {
-  "name": "zotero-hermes",
+  "name": "logios",
   "type": "module",
   "version": "0.5.0",
   "description": "Hermes AI Agent integration for Zotero — Chat with your research library",
   "config": {
-    "addonName": "Hermes Agent for Zotero",
+    "addonName": "Logios",
     "addonID": "hermes@techne-tools.org",
     "addonRef": "hermes",
     "addonInstance": "HermesAgent",
@@ -12,13 +12,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/techne-tools/zotero-hermes.git"
+    "url": "git+https://github.com/techne-tools/logios.git"
   },
   "author": "techne-tools",
   "bugs": {
-    "url": "https://github.com/techne-tools/zotero-hermes/issues"
+    "url": "https://github.com/techne-tools/logios/issues"
   },
-  "homepage": "https://github.com/techne-tools/zotero-hermes#readme",
+  "homepage": "https://github.com/techne-tools/logios#readme",
   "license": "MIT",
   "scripts": {
     "start": "zotero-plugin serve",
