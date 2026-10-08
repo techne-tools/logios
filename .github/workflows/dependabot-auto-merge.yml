@@ -1,11 +1,34 @@
 # Dependabot auto-merge for patch + minor bumps.
 #
-# Differs from the unslop original in one way: `gh pr merge --auto` merges
-# IMMEDIATELY when the base branch has no required status checks, and this
-# estate protects no branches — a red build would land. `gh pr checks --watch`
-# waits for the PR's checks and exits non-zero if any fail, so the merge only
-# happens on green. With no checks at all it exits non-zero too, so we never
-# merge blind.
+# Note on scope: this file is only half the control. The `Merge patch + minor`
+# step below is the SECOND gate — it is deliberately a no-op for updates the
+# ecosystem does not route here:
+#
+#   - github-actions bumps carry no `dependabot/fetch-metadata` update-type, so
+#     `version-update:semver-*` never matches and the step is skipped. They land
+#     via GitHub's native Dependabot auto-merge when `dependabot.yml` opts in
+#     with `auto-merge: true` — keep the two in sync.
+#   - npm bumps reach this workflow and are classified by metadata.
+#
+# Why this does NOT use `gh pr checks --watch`:
+#
+#   `gh pr checks` lists EVERY check on the PR — including this job's own
+#   check-run ("auto-merge"). `--watch` therefore waits for a check that can
+#   only conclude when this job ends: a self-deadlock that burns the job's
+#   entire time budget. Verified in run 37582675348, where the polling output
+#   inside the merge step contains `auto-merge  pending  0` — its own check.
+#
+#   `--fail-fast` made it worse: any non-code check that is not `pass` (e.g.
+#   CodeRabbit's review state) aborts the merge.
+#
+# Instead, poll only the checks that gate correctness — build, lint, test —
+# and ignore everything else on the PR.
+#
+# History this replaces: the old version only ever got as far as running its
+# merge step on days when CI was already red (2026-10-04, 10-06, 10-07), so
+# the deadlock was masked by a real failure. No Dependabot PR has ever been
+# merged by a bot — every one was merged by hand.
+
 name: Dependabot Auto-Merge
 
 on: pull_request_target
@@ -18,10 +41,13 @@ jobs:
   auto-merge:
     if: github.actor == 'dependabot[bot]'
     runs-on: ubuntu-latest
+    # Bound the job. Without this a stuck wait runs to GitHub's 6-hour default
+    # and burns runner minutes silently.
+    timeout-minutes: 25
     steps:
       - name: Fetch Dependabot metadata
         id: metadata
-        uses: dependabot/fetch-metadata@v3
+        uses: dependabot/fetch-metadata@v3.1.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -31,12 +57,62 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_URL: ${{ github.event.pull_request.html_url }}
         run: |
-          if gh pr checks "$PR_URL" --watch --fail-fast; then
-            gh pr merge --squash --delete-branch "$PR_URL"
-          else
-            gh pr comment "$PR_URL" --body \
-              "Auto-merge held: CI is not green on this head. Review before merging."
-          fi
+          set -uo pipefail
+
+          # The CI jobs that gate correctness, by name. Keep in sync with
+          # .github/workflows/ci.yml. Anything not listed (CodeRabbit, this
+          # job's own check) is ignored on purpose.
+          REQUIRED='["build","lint","test"]'
+
+          deadline=$(( SECONDS + 1200 ))   # 20 min, inside the 25 min job cap
+
+          while :; do
+            # `gh pr checks` exits non-zero while checks are pending (8) or
+            # failing (1), so the substitution must not kill the script.
+            json=$(gh pr checks "$PR_URL" --json name,state 2>/dev/null) || true
+
+            if [ -z "$json" ] || [ "$json" = "[]" ]; then
+              echo "No checks reported yet; waiting…"
+            else
+              seen=$(jq --argjson req "$REQUIRED" \
+                '[.[] | select(.name as $n | $req | index($n))] | length' <<<"$json")
+
+              failed=$(jq --argjson req "$REQUIRED" \
+                '[.[] | select(.name as $n | $req | index($n))
+                     | select(.state == "FAILURE" or .state == "ERROR"
+                              or .state == "CANCELLED"
+                              or .state == "TIMED_OUT")] | length' <<<"$json")
+
+              pending=$(jq --argjson req "$REQUIRED" \
+                '[.[] | select(.name as $n | $req | index($n))
+                     | select(.state == "PENDING" or .state == "QUEUED"
+                              or .state == "IN_PROGRESS"
+                              or .state == "EXPECTED" or .state == "WAITING")] | length' <<<"$json")
+
+              if [ "$failed" -gt 0 ]; then
+                echo "CI is red on this head — not merging."
+                gh pr comment "$PR_URL" --body \
+                  "Auto-merge held: CI is not green on this head. Review before merging."
+                exit 0
+              fi
+
+              # All three required checks seen and none still running.
+              if [ "$seen" -ge 3 ] && [ "$pending" -eq 0 ]; then
+                echo "CI green — merging."
+                gh pr merge --squash --delete-branch "$PR_URL"
+                exit 0
+              fi
+            fi
+
+            if [ "$SECONDS" -ge "$deadline" ]; then
+              echo "Timed out waiting for CI — leaving the PR for a human."
+              gh pr comment "$PR_URL" --body \
+                "Auto-merge gave up waiting for CI (>20 min). Merge by hand, or re-run CI."
+              exit 0
+            fi
+
+            sleep 15
+          done
 
       - name: Comment on major updates (manual review required)
         if: steps.metadata.outputs.update-type == 'version-update:semver-major'
