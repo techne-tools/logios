@@ -1,4 +1,5 @@
 .vscode
+.nodeterm
 build
 logs
 node_modules

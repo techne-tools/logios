@@ -105,12 +105,16 @@ bump from `package.json`, and note the tag you create may skip a number.
 > commit is docs-only and "CI only sees committed content". Either fix it in
 > the same commit, or do not commit.
 
-- [ ] Version bumped in package.json (`npm version patch --no-git-tag-version`)
+- [ ] Version bumped in package.json
+      (`npm version <patch|minor|major> --no-git-tag-version` — pick the
+      level from the CHANGELOG: a new feature is a minor, a fix a patch,
+      a breaking preference/manifest change a major)
 - [ ] CHANGELOG.md `[Unreleased]` promoted to `[<ver>] — YYYY-MM-DD`
 - [ ] **`npx prettier --check .`** — the repo's `lint:check` is whole-repo, not
       `src test`. CHANGELOG.md and other markdown are included; unformatted
       markdown (e.g. `*emphasis*` instead of `_emphasis_`) turns CI red.
-- [ ] `npx tsc --noEmit` and `./node_modules/.bin/eslint src test` clean
+- [ ] `npx tsc --noEmit` and `./node_modules/.bin/eslint .` clean — note the
+      `.` for eslint too, not `src test`
 - [ ] `npm test` — the suite must exit 0 with **0 failures** on the committed
       tree. (History: CI's `test` job was red on main from 2026-09-10 to
       2026-10-04 because of the `Profile.dir` string bug plus two bogus test
@@ -118,10 +122,102 @@ bump from `package.json`, and note the tag you create may skip a number.
       are compared as a SET, not a count.
 - [ ] Commit `release: v<x.y.z>`, tag `v<x.y.z>`, push both — the tag push
       triggers the release workflow; do not `gh release create` by hand
+- [ ] Watch the workflow to green, do not just fire the tag:
+      `gh run watch <databaseId> --exit-status`
 - [ ] Verify the published release ships the XPI:
       `gh release view <tag> --json assets --jq '.assets[].name'`
+- [ ] **Verify the published XPI's hash matches the `update.json` it
+      advertises** — a mismatch breaks auto-update silently for every
+      installed user. See Post-Release Verification.
+- [ ] **Doc-drift sweep after any dependency major or host-version bump** —
+      see Post-Release Verification.
 - [ ] Submodule `.refs/zotero-pdfjs-types` restored if it accumulated noise
-- [ ] README updated
+- [ ] README updated (version badge included — it does not track package.json
+      automatically)
+
+## Post-Release Verification
+
+A green workflow is not a verified release. These two checks catch failures
+that CI cannot see, and both are silent when they break.
+
+### 1. The advertised hash must match the published XPI
+
+The plugin's `update_url` points at the **rolling `release` tag**, not the
+version tag — `update.json` is rewritten there by each release, and Zotero
+rejects an XPI whose hash does not match it. Nothing in the build compares the
+two, so a mismatch means auto-update fails for every installed user while the
+release page looks perfect.
+
+`update_hash` is `sha512:` followed by the **hex** digest — do not run it
+through `base64 -d`.
+
+```bash
+tag=v<x.y.z>
+d=$(mktemp -d)
+
+# the artifact users will actually download
+curl -sL -o "$d/pub.xpi" \
+  "https://github.com/techne-tools/zotero-hermes/releases/download/$tag/hermes-agent-for-zotero.xpi"
+
+# what update.json advertises (strip the "sha512:" prefix -> hex)
+advertised=$(curl -sL \
+  "https://github.com/techne-tools/zotero-hermes/releases/download/release/update.json" \
+  | jq -r '.addons["hermes@techne-tools.org"].updates[0].update_hash' \
+  | sed 's/^sha512://')
+
+# the artifact's actual digest
+actual=$(shasum -a 512 "$d/pub.xpi" | awk '{print $1}')
+
+echo "advertised: $advertised"
+echo "actual    : $actual"
+if [ -z "$advertised" ] || [ -z "$actual" ]; then
+  echo "FAIL — could not read one of the hashes (check the tag and the release assets)"
+elif [ "$advertised" = "$actual" ]; then
+  echo "MATCH"
+else
+  echo "MISMATCH — auto-update is broken for installed users"
+fi
+```
+
+The two hex strings must be **identical**. Also confirm the XPI contains the
+version you think it does — the manifest is templated at build time:
+
+```bash
+unzip -p "$d/pub.xpi" manifest.json \
+  | jq '{version, max: .applications.zotero.strict_max_version}'
+```
+
+### 2. Doc-drift sweep after a dependency major or host-version bump
+
+Every dependency bump that changes a major gets recorded in the CHANGELOG while
+the prose in the repo keeps describing the old one. Nothing in CI catches this,
+so it rides along into the next release (v0.5.0 shipped with React 18 and
+Firefox 115 ESR still asserted in six files after the React 19 merge).
+
+```bash
+# stack facts that appear in prose
+grep -rn 'React 18\|React 19\|115 ESR\|140 ESR' \
+  --include='*.md' --include='*.ts' --include='*.tsx' . \
+  | grep -v node_modules | grep -v '^\./\.refs/'
+
+# the previous version number, outside the historical CHANGELOG entries
+grep -rn '0\.<prev>\.0' --include='*.md' . \
+  | grep -v node_modules | grep -v CHANGELOG
+```
+
+**Where the stale copies live** (all committed, all hand-maintained):
+
+| File                                    | Holds                                                   |
+| --------------------------------------- | ------------------------------------------------------- |
+| `README.md`                             | version badge, architecture diagram, host-version notes |
+| `ARCHITECTURE.md`                       | the stack line (`UI: React N`, ESR version)             |
+| `TODO.md`                               | header `Current Version` + `Updated` date               |
+| `.agent.md`                             | file map descriptions, Development Stack block          |
+| `.agent/rules/agent-standards.md`       | the sandbox-constraint preamble                         |
+| `.agent/skills/zotero-dev/references/*` | React conventions, stack lists                          |
+
+Historical CHANGELOG entries and `docs/PLAN-*.md` **should** keep their old
+versions — they are dated records, not current state. Do not "fix" them.
 
 ## Testing Strategy
 

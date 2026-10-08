@@ -23,6 +23,7 @@ hermes_stdout.txt
 # Editor
 .vscode/
 .idea/
+.nodeterm/
 *.swp
 *.swo
 .antigravitycli/
