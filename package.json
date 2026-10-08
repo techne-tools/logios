@@ -34,7 +34,7 @@
   "dependencies": {
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
-    "zotero-plugin-toolkit": "^5.2.0"
+    "zotero-plugin-toolkit": "^6.0.0"
   },
   "devDependencies": {
     "@types/chai": "^5.2.3",
