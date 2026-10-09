@@ -21,6 +21,7 @@ function makeAddon(overrides: Record<string, any> = {}) {
           getAttachedItems: () => overrides.attached ?? [],
           getSelectedCollection: () => overrides.collection ?? null,
           attachCollection: async () => overrides.collectionItems ?? [],
+          searchFullText: async () => overrides.fullTextItems ?? [],
           bulkUpdateMetadata: async (_ids: number[], updates: any) => {
             captured.bulkUpdates = updates;
             return { status: "success", updated: _ids.length, failed: 0 };
@@ -275,6 +276,43 @@ describe("SlashCommands", function () {
       expect(out).to.include("sonic boom");
       expect(out).to.include("p.3");
       expect(out).to.include("K1");
+    });
+  });
+
+  describe("/find", function () {
+    function hit(id: number, title: string, creators: any[] = []) {
+      return {
+        id,
+        getDisplayTitle: () => title,
+        getCreators: () => creators,
+        getField: () => "",
+      };
+    }
+
+    it("requires a query", async function () {
+      const { addon } = makeAddon();
+      const out = (await command("find").execute(addon, "")) as string;
+      expect(out).to.include("Usage:");
+    });
+
+    it("reports a clean miss and names the OCR limit", async function () {
+      const { addon } = makeAddon({ fullTextItems: [] });
+      const out = (await command("find").execute(addon, "nothing")) as string;
+      expect(out).to.include("No PDFs contain");
+      expect(out).to.include("no text layer");
+    });
+
+    it("lists full-text hits with an add-context pill", async function () {
+      const { addon } = makeAddon({
+        fullTextItems: [hit(7, "The Soundscape", [{ lastName: "Schafer" }])],
+      });
+      const out = (await command("find").execute(
+        addon,
+        "acoustic ecology",
+      )) as string;
+      expect(out).to.include("The Soundscape");
+      expect(out).to.include("Schafer");
+      expect(out).to.include("add-context:7");
     });
   });
 });

@@ -50,6 +50,7 @@ Hermes provides the following slash commands for library operations and agent co
 | `/gaps`            | Identify literature gaps in attached literature                             |
 | `/draft-litreview` | Draft a publication-ready literature review                                 |
 | `/search`          | Search notes and library items and add them to context                      |
+| `/find`            | Full-text search inside PDFs across the library (finds text, not metadata)  |
 | `/annotations`     | List PDF annotations for the attached item                                  |
 | `/cite`            | Generate in-text citation and bibliography for the attached item            |
 | `/tag`             | Suggest or apply tags for the attached item                                 |

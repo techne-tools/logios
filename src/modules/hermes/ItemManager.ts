@@ -309,6 +309,72 @@ export class ItemManager {
     return null;
   }
 
+  /**
+   * Whole-library FULL-TEXT search over indexed attachment text — Zotero's
+   * `fulltextContent` condition, the same index the reader's own search box
+   * uses. This is the in-process lexical tier: it needs no sidecar and no
+   * network, and it answers "which papers mention this phrase?", which the
+   * metadata-only `/search` cannot.
+   *
+   * The full-text condition matches *attachment* items (the PDFs whose text
+   * Zotero indexed), so each hit is mapped to its parent item and de-duplicated
+   * — five matching attachments on one paper should read as one result.
+   * Standalone attachments (no parent) are returned as-is; note children are
+   * skipped, since a note is not a library item the user wants in context.
+   *
+   * Fail-soft: any error resolves to `[]` rather than throwing into the caller.
+   */
+  public async searchFullText(
+    query: string,
+    limit = 25,
+  ): Promise<Zotero.Item[]> {
+    const q = query.trim();
+    if (!q) return [];
+
+    try {
+      const s = new Zotero.Search();
+      s.addCondition("fulltextContent", "contains", q);
+      const ids = await s.search();
+      if (!ids || ids.length === 0) return [];
+
+      const matches = (await Zotero.Items.getAsync(ids)) as Array<
+        Zotero.Item | false
+      >;
+
+      const out: Zotero.Item[] = [];
+      const seen = new Set<number>();
+      for (const item of matches) {
+        if (!item) continue;
+
+        const isAttachment =
+          typeof (item as any).isAttachment === "function" &&
+          (item as any).isAttachment();
+        const parentId = (item as any).parentItemID as number | undefined;
+
+        const resolved = (
+          isAttachment && parentId ? Zotero.Items.get(parentId) : item
+        ) as Zotero.Item | false;
+
+        if (!resolved) continue;
+        if (
+          typeof (resolved as any).isNote === "function" &&
+          (resolved as any).isNote()
+        ) {
+          continue;
+        }
+        if (seen.has(resolved.id)) continue;
+
+        seen.add(resolved.id);
+        out.push(resolved);
+        if (out.length >= limit) break;
+      }
+      return out;
+    } catch (err) {
+      this.addon.log("searchFullText error:", err);
+      return [];
+    }
+  }
+
   public async attachCollection(
     collectionOrId: any,
     limit = 25,

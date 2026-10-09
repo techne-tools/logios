@@ -819,3 +819,156 @@ describe("ItemManager bulk metadata operations", function () {
     expect(result.trashed).to.equal(0);
   });
 });
+
+describe("ItemManager.searchFullText", function () {
+  /**
+   * full-text search reaches Zotero globals (Search, Items), so overlay a stub
+   * on the REAL Zotero object — never replace it wholesale (the test runner's
+   * reporter calls Zotero.HTTP). Restore in `after`.
+   */
+  after(function () {
+    (globalThis as any).Zotero = (globalThis as any).__realZotero;
+    delete (globalThis as any).__realZotero;
+  });
+
+  function searchItem(
+    id: number,
+    opts: {
+      title?: string;
+      isAttachment?: boolean;
+      isNote?: boolean;
+      parentItemID?: number;
+    } = {},
+  ) {
+    return {
+      id,
+      getDisplayTitle: () => opts.title ?? `Item ${id}`,
+      isAttachment: () => opts.isAttachment ?? false,
+      isNote: () => opts.isNote ?? false,
+      parentItemID: opts.parentItemID,
+    };
+  }
+
+  function stubSearch(ids: number[] | false, itemsById: Map<number, any>) {
+    const realZotero = (globalThis as any).Zotero;
+    (globalThis as any).__realZotero = realZotero;
+
+    let condition: {
+      condition: string;
+      operator: string;
+      value: string;
+    } | null = null;
+
+    class FakeSearch {
+      addCondition(c: string, operator: string, value: string) {
+        condition = { condition: c, operator, value };
+      }
+      async search() {
+        return ids;
+      }
+    }
+
+    (globalThis as any).Zotero = {
+      ...realZotero,
+      Search: FakeSearch,
+      Items: {
+        getAsync: async (list: number[]) =>
+          list.map((id) => itemsById.get(id) ?? false),
+        get: (id: number) => itemsById.get(id) ?? false,
+      },
+    };
+
+    return {
+      lastCondition: () => condition,
+    };
+  }
+
+  it("maps attachment hits to their parent item", async function () {
+    const parent = searchItem(10, { title: "The Soundscape" });
+    // Three attachments on the same paper — should collapse to one result.
+    const att1 = searchItem(20, { isAttachment: true, parentItemID: 10 });
+    const att2 = searchItem(21, { isAttachment: true, parentItemID: 10 });
+    const att3 = searchItem(22, { isAttachment: true, parentItemID: 10 });
+    stubSearch(
+      [20, 21, 22],
+      new Map([
+        [20, att1],
+        [21, att2],
+        [22, att3],
+        [10, parent],
+      ]),
+    );
+
+    const out = await new ItemManager(mockAddon()).searchFullText("soundscape");
+    expect(out).to.have.length(1);
+    expect(out[0].id).to.equal(10);
+  });
+
+  it("returns a standalone attachment (no parent) as-is", async function () {
+    const att = searchItem(30, { isAttachment: true, title: "Loose scan.pdf" });
+    stubSearch([30], new Map([[30, att]]));
+
+    const out = await new ItemManager(mockAddon()).searchFullText("scan");
+    expect(out).to.have.length(1);
+    expect(out[0].id).to.equal(30);
+  });
+
+  it("drops note children from the results", async function () {
+    const note = searchItem(40, { isNote: true });
+    stubSearch([40], new Map([[40, note]]));
+
+    const out = await new ItemManager(mockAddon()).searchFullText("x");
+    expect(out).to.have.length(0);
+  });
+
+  it("issues a fulltextContent contains condition", async function () {
+    const stub = stubSearch([1], new Map([[1, searchItem(1)]]));
+    await new ItemManager(mockAddon()).searchFullText("acoustic ecology");
+    expect(stub.lastCondition()).to.deep.equal({
+      condition: "fulltextContent",
+      operator: "contains",
+      value: "acoustic ecology",
+    });
+  });
+
+  it("returns [] for a blank query without touching the search index", async function () {
+    const stub = stubSearch([1], new Map([[1, searchItem(1)]]));
+    const out = await new ItemManager(mockAddon()).searchFullText("   ");
+    expect(out).to.deep.equal([]);
+    expect(stub.lastCondition()).to.be.null;
+  });
+
+  it("returns [] when the index matches nothing", async function () {
+    stubSearch([], new Map());
+    const out = await new ItemManager(mockAddon()).searchFullText("nope");
+    expect(out).to.deep.equal([]);
+  });
+
+  it("fails soft to [] when the search throws", async function () {
+    const realZotero = (globalThis as any).Zotero;
+    (globalThis as any).__realZotero = realZotero;
+    class ThrowingSearch {
+      addCondition() {}
+      async search(): Promise<number[]> {
+        throw new Error("index unavailable");
+      }
+    }
+    (globalThis as any).Zotero = { ...realZotero, Search: ThrowingSearch };
+
+    const out = await new ItemManager(mockAddon()).searchFullText("boom");
+    expect(out).to.deep.equal([]);
+  });
+
+  it("honours the result limit", async function () {
+    const items = new Map<number, any>();
+    const ids: number[] = [];
+    for (let i = 1; i <= 5; i++) {
+      items.set(i, searchItem(i));
+      ids.push(i);
+    }
+    stubSearch(ids, items);
+
+    const out = await new ItemManager(mockAddon()).searchFullText("x", 2);
+    expect(out).to.have.length(2);
+  });
+});

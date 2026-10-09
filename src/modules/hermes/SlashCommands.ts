@@ -343,6 +343,45 @@ Requirements:
     name: "search",
   },
   {
+    description:
+      "Full-text search inside PDFs across the whole library (finds text, not just metadata)",
+    execute: async (addon, args) => {
+      const query = args.trim();
+      if (!query) {
+        return "Please specify a full-text query. Usage: `/find [phrase]`";
+      }
+
+      const items = await addon.data.hermes!.items.searchFullText(query);
+      if (items.length === 0) {
+        return (
+          `No PDFs contain **${query}**.\n\n` +
+          "_Full-text search covers the text Zotero has indexed for attachments. " +
+          "A scanned PDF with no text layer is invisible here — it needs OCR first._"
+        );
+      }
+
+      const list = items
+        .slice(0, 10)
+        .map((item) => {
+          const creators = item
+            .getCreators()
+            .map((c: any) => c.lastName || c.firstName)
+            .join(", ");
+          const creatorStr = creators ? ` by ${creators}` : "";
+          const yearStr = item.getField("date")
+            ? ` (${item.getField("date")})`
+            : "";
+          return `- **${item.getDisplayTitle()}**${creatorStr}${yearStr} [Add to Context](add-context:${item.id})`;
+        })
+        .join("\n");
+
+      const extra =
+        items.length > 10 ? `\n\n_+${items.length - 10} more match(es)._` : "";
+      return `**${items.length}** PDF(s) contain **${query}**:\n\n${list}${extra}`;
+    },
+    name: "find",
+  },
+  {
     description: "List all PDF annotations for the attached Zotero item",
     execute: async (addon, _args) => {
       // M4: respect the enableAnnotations pref

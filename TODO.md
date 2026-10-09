@@ -610,7 +610,22 @@ All features must follow Logios coding conventions.
    therefore stays as shipped: selection-popup button + "Explain/Critique"
    context menus → open the library-sidebar chat (`src/hooks.ts`
    `registerReaderActions()`). The "chat beside the PDF" intent is met by the
-   sidebar in a split layout. See spec §6 and open question 6.2, both resolved.
+   sidebar in a split layout. See spec §6 and open question **2**, both resolved.
+4. **Semantic (sidecar) tier: deferred, not built (2026-10-09).** The intended
+   probe — `hermes sidecar --version` — targets a command that **does not exist**,
+   and Hermes exposes no embedding or OCR surface. OCR and long batch are already
+   served in-process (installed `tesseract`/`ocrmypdf` via the existing
+   `Subprocess` path; `SynthesisManager` + `hermes cron`); semantic retrieval's
+   need is unmeasured and already met by the Hermes memory stack (`noema` +
+   qdrant memory MCP). No `SidecarManager`, no daemon, no `enableSidecar` pref.
+   Reopen only on a _measured_ recall failure. Full finding:
+   `docs/superpowers/reviews/2026-10-09-sidecar-design-review.md`; spec §7.
+5. **Full-text search is now available in-process (`/find`, 2026-10-09).** Zotero
+   indexes attachment text and exposes a `fulltextContent` search condition; the
+   plugin previously used it nowhere, and `/search` queried metadata only.
+   `ItemManager.searchFullText` + `/find [phrase]` close the plan's original D0
+   tier with no sidecar and no network. Scanned PDFs with no text layer remain
+   invisible to it — that limit is surfaced honestly in the empty-result message.
 
 ---
 

@@ -287,25 +287,38 @@ string): void` (LRU, cap 200).
 - [x] Commit: `feat: reader chat panel` (or `docs+todo: reader injection infeasible`).
       → `docs: reader-panel panel infeasible — keep toolbar/context-menu → sidebar`.
 
-### Task 8: Sidecar tier (design first via @oracle)
+### Task 8: Sidecar tier (design first via @oracle) — **CLOSED: DEFERRED, NO CODE**
 
-**Files (post-design):**
+**Files (post-design):** none. The design review concluded the tier must not be
+built; see the review doc.
 
-- Create: `src/modules/hermes/sidecar/SidecarManager.ts`,
-  `test/sidecar.test.ts`, pref `enableSidecar` (default false) in default
-  prefs + PreferencesManager
-- Spec section: 7
-
-- [ ] @oracle reviews Sidecar Boundary design (subcommand vs standalone,
+- [x] @oracle reviews Sidecar Boundary design (subcommand vs standalone,
       probe handshakes, failure contracts) — decision recorded in spec.
-- [ ] Implement `SidecarManager` fail-soft API: `isAvailable()` (probe),
-      `embed(texts)`, `ocr(pdfPath)`, `scheduleBatch(job)` stubs with
-      contract tests: absent binary → all resolve false/null, no throw;
-      plugin flows unchanged with sidecar off (degradation test: full
-      lexical search path exercised when `isAvailable` false).
-- [ ] Provenance: any sidecar-derived result surfaces source path in tool
+      → **DEFER.** The spec's own probe (`hermes sidecar --version`) targets a
+      command that does not exist; OCR and batch are already served in-process;
+      semantic retrieval's need is unmeasured and already met by the user's agent
+      stack. Review: `docs/superpowers/reviews/2026-10-09-sidecar-design-review.md`.
+- [x] Implement `SidecarManager` fail-soft API …
+      → **Not applicable (no host, no `SidecarManager`).** Writing fail-soft
+      plumbing ahead of a chosen host is the architectural preference DESIGN.md
+      rule 1 forbids.
+- [x] Provenance: any sidecar-derived result surfaces source path in tool
       metadata.
-- [ ] Commit: `feat: sidecar manager (fail-soft)`.
+      → **Not applicable.**
+- [x] Commit: `feat: sidecar manager (fail-soft)`.
+      → **Superseded by the D0 task below.**
+
+### Task 8b: D0 — in-process full-text search (`/find`) — **DONE**
+
+**Files:** `src/modules/hermes/ItemManager.ts` (`searchFullText`),
+`src/modules/hermes/SlashCommands.ts` (`/find`), `test/itemManager.test.ts`,
+`test/slashCommands.test.ts`. Spec section: 7b.
+
+- [x] `ItemManager.searchFullText(query, limit=25)`: `fulltextContent` `contains`
+      search, attachment→parent mapping, de-dup, drop note children, fail-soft.
+- [x] `/find [phrase]` with `add-context:` pills and an honest no-text-layer note.
+- [x] Tests: 8 (manager) + 3 (command); suite 315 → **326 passed / 0 failed**.
+- [x] Commit: `feat: /find in-process full-text search (D0 tier)`.
 
 ---
 

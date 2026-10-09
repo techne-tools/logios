@@ -183,21 +183,51 @@ beside the reader in a split layout. Fallback recorded in `TODO.md`.
 
 ## 7. Sidecar tier (additive; degrade-graceful)
 
-**Intent**: capability the plugin genuinely cannot host — embeddings, OCR,
-unattended batch — per the Sidecar Boundary in DESIGN.md.
+**DEFERRED 2026-10-09 — design review complete; do not build.** Full finding:
+`docs/superpowers/reviews/2026-10-09-sidecar-design-review.md`.
 
-- **Oracle design review required before code.** Skeleton to emerge from that
-  review, provisionally: `src/modules/hermes/sidecar/SidecarManager.ts` —
-  `isAvailable(): Promise<boolean>` (probe `hermes sidecar --version`),
-  `embed(texts)` / `ocr(pdfPath)` / `scheduleBatch(job)`; every method
-  fail-soft (resolve-false/-null on absence). Callers degrade: embed absent →
-  lexical `fulltextContent` search only; OCR absent → item surfaces "no text
-  layer" honestly.
-- Pref `enableSidecar` default **false**. Plugin stays fully useful absent.
-- Nothing that works in-process moves to the sidecar.
+The design review overturned the premise of this section. The probe originally
+specified here — `hermes sidecar --version` — targets a command that **does not
+exist** [measured: `hermes sidecar --version` → "'sidecar' is not a `hermes`
+command"]. Hermes exposes no embedding surface and no OCR surface
+[measured: `hermes --help | grep -icE 'embed|ocr|vector|semantic'` → 0]. Of the
+three capabilities this tier was to carry:
 
-**Success**: with sidecar absent, every existing flow works unchanged; with it
-present, semantic search results carry provenance (item + score + path taken).
+- **OCR** — falsified as a sidecar need: tesseract/ocrmypdf are already installed
+  and reachable through the plugin's existing `Subprocess.sys.mjs` path.
+- **Long unattended batch** — falsified: `SynthesisManager` already batches and
+  resumes in-process, and `hermes cron` already schedules.
+- **Embeddings / semantic retrieval** — cannot be hosted in the sandbox cheaply
+  [inferred], but the need is **unmeasured** and the capability already exists in
+  the user's agent stack (noema + a qdrant-backed memory MCP).
+
+Building fail-soft plumbing ahead of a chosen host is the architectural
+preference DESIGN.md rule 1 forbids. **No `SidecarManager`, no daemon, no pref.**
+Any future index is gated on a _measured_ recall failure, and should route
+through the ACP agent's memory surface via the ACP `mcpServers` field the plugin
+already sends (currently empty) rather than a new process.
+
+**Replaced by:** D0 — in-process lexical full-text search (below). That was the
+plan's genuine first tier and had simply never been exposed.
+
+## 7b. D0 — in-process full-text search (`/find`)
+
+**Intent**: the sidecar was never needed to search _inside_ papers. Zotero
+indexes attachment text and exposes a `fulltextContent` search condition
+in-process (`searchConditions.js:793`; the same index the reader's own search
+box uses). The plugin used it nowhere; `/search` queried metadata only
+(`quicksearch-titleCreatorYear`).
+
+- `ItemManager.searchFullText(query, limit=25)` issues a `fulltextContent`
+  `contains` search, maps each attachment hit to its parent item, de-duplicates,
+  drops note children, and fails soft to `[]`. [measured: full suite green]
+- `/find [phrase]` surfaces it, listing matches with `add-context:` pills.
+- Degradation is honest: a scanned PDF with no text layer is invisible here, and
+  the empty-result message says so rather than implying the library lacks the
+  text.
+
+**Success**: with no sidecar and no network, `/find` answers "which papers
+mention this phrase?" against the real index.
 
 ## 8. Inline writing integration
 
@@ -252,8 +282,10 @@ that build; a clean `release/` channel read confirms stable path.
 
 ## Open questions (operator discretion)
 
-1. Sidecar runtime: `hermes sidecar` subcommand vs standalone script?
-   (Oracle review resolves.)
+1. ~~Sidecar runtime: `hermes sidecar` subcommand vs standalone script?~~
+   **RESOLVED 2026-10-09** — neither. The probe target does not exist and no
+   capability behind it survives the boundary rules; the tier is deferred. See
+   §7 and the design review. D0 full-text search replaces it (§7b).
 2. ~~Reader panel: inject into reader chrome vs Zotero primary-pane tab?~~
    **RESOLVED 2026-10-09** — neither; the reader chrome has no panel hook (see
    §6 spike result). Keep toolbar/context-menu actions → library sidebar.

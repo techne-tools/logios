@@ -2,6 +2,32 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- **In-process full-text search (`/find [phrase]`).** `/search` queried metadata
+  (title, creator, year) only; it could not answer "which papers mention this
+  phrase?". Zotero itself indexes attachment text and exposes a `fulltextContent`
+  search condition to plugins, so no external service is needed.
+  - `ItemManager.searchFullText(query, limit=25)` runs the `fulltextContent`
+    condition, maps each attachment hit to its parent item, de-duplicates
+    (five matching PDFs on one paper read as one result), drops note children,
+    and fails soft to `[]`.
+  - The empty-result message names the limit honestly: a scanned PDF with no
+    text layer is invisible to this search and would need OCR first.
+
+### Changed
+
+- **The sidecar tier is deferred, not built.** Its design probe —
+  `hermes sidecar --version` — targets a command Hermes does not have, and no
+  embedding or OCR surface exists. Of the three capabilities it was to carry,
+  OCR and long batch are already served in-process (installed `tesseract` /
+  `ocrmypdf` via the existing `Subprocess` path; `SynthesisManager` and
+  `hermes cron`), and semantic retrieval's need is unmeasured while the user's
+  Hermes memory stack already provides it. No `SidecarManager`, no daemon, no
+  `enableSidecar` preference. Reopen only on a measured recall failure.
+
 ## [0.6.0] — 2026-10-09
 
 ### Added
