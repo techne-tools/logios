@@ -97,7 +97,7 @@ describe("SecretVault (live Zotero runtime)", function () {
       expect.fail("Expected error for empty secret name");
     } catch (error) {
       expect(error).to.be.instanceOf(Error);
-      expect(error.message).to.contain(
+      expect((error as Error).message).to.contain(
         "Secret name must be a non-empty string",
       );
     }
@@ -107,7 +107,7 @@ describe("SecretVault (live Zotero runtime)", function () {
       expect.fail("Expected error for null secret name");
     } catch (error) {
       expect(error).to.be.instanceOf(Error);
-      expect(error.message).to.contain(
+      expect((error as Error).message).to.contain(
         "Secret name must be a non-empty string",
       );
     }
@@ -119,7 +119,9 @@ describe("SecretVault (live Zotero runtime)", function () {
       expect.fail("Expected error for undefined secret value");
     } catch (error) {
       expect(error).to.be.instanceOf(Error);
-      expect(error.message).to.contain("Secret value must be provided");
+      expect((error as Error).message).to.contain(
+        "Secret value must be provided",
+      );
     }
   });
 });

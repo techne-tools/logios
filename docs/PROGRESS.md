@@ -51,6 +51,7 @@ reference.
 | -------------------------------------- | ---------------------------------------------- |
 | `npm run build`                        | green                                          |
 | `tsc --noEmit` (src project)           | exit 0                                         |
+| `npm run typecheck:test`               | exit 0 (checks all 23 `test/*.test.ts`)        |
 | `NODE_ENV=test npm test -- --no-watch` | see `docs/NEXT_STEPS.md` for the current count |
 
 The consolidation commit itself is not the end of Wave 1: the Task 3

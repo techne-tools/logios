@@ -56,8 +56,10 @@ describe("HermesProfile", function () {
   before(function () {
     // nsIFile constants are read inside the hook, not at describe scope
     // (mocha/no-setup-in-describe).
-    NS_IFILE_DIRECTORY = Components.interfaces.nsIFile.DIRECTORY_TYPE;
-    NS_IFILE_FILE = Components.interfaces.nsIFile.NORMAL_FILE_TYPE;
+    // The typings mark these XPCOM ABI constants optional; they are present
+    // on any real nsIFile (XPCOM would be broken otherwise).
+    NS_IFILE_DIRECTORY = Components.interfaces.nsIFile.DIRECTORY_TYPE!;
+    NS_IFILE_FILE = Components.interfaces.nsIFile.NORMAL_FILE_TYPE!;
 
     const props = (Components.classes as any)[
       "@mozilla.org/file/directory_service;1"
