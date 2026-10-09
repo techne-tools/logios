@@ -1,5 +1,8 @@
 .vscode
 .nodeterm
+.opencode
+.superpowers
+.worktrees
 build
 logs
 node_modules
