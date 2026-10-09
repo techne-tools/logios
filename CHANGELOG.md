@@ -16,6 +16,19 @@ All notable changes to this project are documented in this file.
     and fails soft to `[]`.
   - The empty-result message names the limit honestly: a scanned PDF with no
     text layer is invisible to this search and would need OCR first.
+- **Insert a citation into a note from `/cite` (≤3 clicks, gated).** `/cite`
+  now emits "Insert at top of note" / "Insert at bottom of note" pills. Clicking
+  one opens the approval dialog with the exact text to be inserted and the named
+  position; approving writes the citation into the note (creating one under the
+  attached item if the editor has no note open), rejecting records the block.
+  - `NoteManager.insertCitationIntoNote` routes the write through `runWrite`
+    (APPROVE → APPLY → RECORD) so insertion is audited either way. Cursor-position
+    insertion is not offered — reading the note editor's caret is infeasible (see
+    Changed), so v1 uses the two end positions.
+  - `src/modules/hermes/citationInsert.ts` is the pure, unit-tested half: it
+    escapes the CSL text (which can contain `&`, `<`, `>`, quotes) and composes
+    the new note body. `writeNote` sends bodies to `setNote()` without escaping,
+    so this escaping is what keeps a citation from corrupting the note.
 
 ### Changed
 
@@ -27,6 +40,13 @@ All notable changes to this project are documented in this file.
   `hermes cron`), and semantic retrieval's need is unmeasured while the user's
   Hermes memory stack already provides it. No `SidecarManager`, no daemon, no
   `enableSidecar` preference. Reopen only on a measured recall failure.
+- **Ghost text / inline note completion is dropped from the roadmap.** A
+  read-only audit of Zotero 10.0.6 shows the note editor is a content-privileged
+  iframe running React + ProseMirror behind a private `postMessage` bridge: no
+  public caret/selection, overlay, change-event, or cursor-insertion surface
+  exists. The capability it was meant to provide is served deliberately by the
+  `/cite` insert pills above. Full finding:
+  `docs/superpowers/spikes/ghost-text-spike.md`.
 
 ## [0.6.0] — 2026-10-09
 

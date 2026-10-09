@@ -466,6 +466,19 @@ Requirements:
 
         const snippets = addon.data.hermes!.citations.getCitationSnippets(item);
 
+        // "Insert into note" pills. The citation travels in the href; the click
+        // handler encodes it (and the position) before calling
+        // `notes.insertCitationIntoNote`, so the gated write is reachable in
+        // <=3 clicks. `encodeURIComponent` keeps the CSL punctuation ("(Smith,
+        // 1977)", "&") from breaking the markdown link target.
+        const cslCitation = citation || cleanBib;
+        const insertPills = cslCitation
+          ? [
+              `[Insert at top of note](insert-citation:top:${encodeURIComponent(cslCitation)})`,
+              `[Insert at bottom of note](insert-citation:bottom:${encodeURIComponent(cslCitation)})`,
+            ].join(" ")
+          : "_No citation text to insert._";
+
         return `### Citation (${styleTitle}) for **${parentItem.title}**
 
 **CSL In-text Citation:**
@@ -473,6 +486,9 @@ ${citation || "None"}
 
 **CSL Bibliography:**
 ${cleanBib}
+
+**Insert into note:**
+${insertPills}
 
 ---
 

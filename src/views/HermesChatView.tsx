@@ -844,6 +844,7 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
         !href.startsWith("https://") &&
         !href.startsWith("add-context:") &&
         !href.startsWith("apply-tag:") &&
+        !href.startsWith("insert-citation:") &&
         !href.startsWith("action:")
       ) {
         e.preventDefault();
@@ -943,6 +944,76 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
           ]);
         } catch (err) {
           setError(`Failed to apply tag: ${(err as Error).message}`);
+        }
+      } else if (href && href.startsWith("insert-citation:")) {
+        e.preventDefault();
+        // Payload form: `insert-citation:<position>:<encoded citation>`.
+        // The citation is URL-encoded by the `/cite` emitter because CSL text
+        // contains ")", ",", "&" and would otherwise break the link target.
+        const rest = href.substring("insert-citation:".length);
+        const sep = rest.indexOf(":");
+        if (sep < 0) {
+          setError("Malformed citation link.");
+          return;
+        }
+        const position = rest.substring(0, sep);
+        if (position !== "top" && position !== "bottom") {
+          setError(`Unknown insertion position: ${position}`);
+          return;
+        }
+        let citationText: string;
+        try {
+          citationText = decodeURIComponent(rest.substring(sep + 1));
+        } catch {
+          setError("Could not read the citation from the link.");
+          return;
+        }
+
+        // Resolve the target: prefer the note open in the editor; otherwise
+        // fall back to a note under the first attached item. Zotero exposes no
+        // "current note" API, so we never guess silently — if neither exists we
+        // say so and stop before any write.
+        let noteID: number | null = null;
+        let parentItemID: number | null = null;
+        const editing = await hermes.notes.readEditingNote();
+        if (editing) {
+          noteID = editing.noteID;
+        } else {
+          const attached = hermes.items.getAttachedItems();
+          parentItemID = attached[0]?.id ?? null;
+        }
+
+        if (noteID === null && parentItemID === null) {
+          setError(
+            "No target note. Open a note in the editor, or attach a paper first.",
+          );
+          return;
+        }
+
+        try {
+          const result = await hermes.notes.insertCitationIntoNote({
+            citation: citationText,
+            position,
+            noteID,
+            parentItemID,
+          });
+          const message =
+            result.status === "success"
+              ? `Citation inserted at the ${position} of the note.`
+              : result.status === "rejected"
+                ? "Citation insertion rejected."
+                : `Citation insertion failed: ${result.error ?? "unknown error"}`;
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: generateMessageId(),
+              content: message,
+              role: "system",
+              timestamp: Date.now(),
+            },
+          ]);
+        } catch (err) {
+          setError(`Citation insertion failed: ${(err as Error).message}`);
         }
       } else if (href && href.startsWith("action:")) {
         e.preventDefault();

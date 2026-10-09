@@ -332,22 +332,47 @@ built; see the review doc.
   handling), `src/views/components/ChatMessageItem.tsx` (pill renderer)
 - Test: `test/citationPill.test.ts`
 
-- [ ] Failing tests: `insert-citation` pill on a message with citations →
+> **AMENDED 2026-10-09 (doc-vs-code conflicts, flagged not silently resolved):**
+>
+> 1. **Pill renderer lives in `MarkdownRenderer.tsx`, not `ChatMessageItem.tsx`.**
+>    All `action:`/`add-context:`/`apply-tag:` pills are rendered as safe-URL
+>    inline links by `src/utils/MarkdownRenderer.tsx` (the sandbox-safe path —
+>    `ChatMessageItem.tsx` holds the message *toolbar* buttons, not markdown
+>    pills). `insert-citation:` was added to `isSafeUrl` + the action-pill class
+>    list there, and the click interception joined the existing handler in
+>    `HermesChatView.tsx`.
+> 2. **Test files split by layer, not one `citationPill.test.ts`.**
+>    `test/citationInsert.test.ts` (pure escaping/composition) +
+>    `test/noteManagerCitation.test.ts` (the gated write path). The gate is
+>    asserted against the real `runWrite` with a recording dialog/audit, matching
+>    `writeGates.integration.test.ts`'s convention.
+> 3. **Position choice is two pills, not a two-step prompt** — one click fewer,
+>    same explicit top/bottom decision. See below.
+
+- [x] Failing tests: `insert-citation` pill on a message with citations →
       opens position choice (top/bottom) → `runWrite` gate on
       `NoteManager.writeNote` path, diff = exact insertion text + position →
       approve applies, reject records blocked.
-- [ ] Implement pill flow; reuse `/cite` CSL output unchanged.
-- [ ] Commit: `feat: insert-citation pill (gated)`.
+      → Superseded on target: implemented as TWO pills (top / bottom) rather than
+      a two-step position prompt — fewer clicks, same explicit choice. The gate
+      is `NoteManager.insertCitationIntoNote`, which routes `runWrite` to a
+      `setNote`+`saveTx` apply (the same mutation `writeNote` performs).
+- [x] Implement pill flow; reuse `/cite` CSL output unchanged.
+- [x] Commit: `feat: insert-citation pill (gated)`.
 
-### Task 10: Ghost-text feasibility spike (report only)
+### Task 10: Ghost-text feasibility spike (report only) — **DONE: DROPPED**
 
 **Files:**
 
 - Create: `docs/superpowers/spikes/ghost-text-spike.md`
 
-- [ ] Investigate Zotero 10 note editor hook points (events, overlays,
+- [x] Investigate Zotero 10 note editor hook points (events, overlays,
       sandbox limits) — read-only; produce feasibility report +
       recommendation; update TODO.md + spec open question 3. No code.
+      → **INFEASIBLE.** The editor is a content-privileged iframe running
+      React + ProseMirror behind a private `postMessage` bridge; no public
+      caret/selection, overlay, change-event, or cursor-insertion surface.
+      Ghost text dropped from the roadmap.
 
 ### Task 11: Release channel verification
 
@@ -356,11 +381,17 @@ built; see the review doc.
 - Modify: `.agent/skills/zotero-ops/SKILL.md` (release runbook + channel
   checklist)
 
-- [ ] Dry-run locally: `npm run build && npm run release` (scratch);
+- [x] Dry-run locally: `npm run build && npm run release` (scratch);
       confirm `update.json` vs `update-beta.json` branch (version contains
       `-` → beta) and xpi link template resolve.
-- [ ] Document runbook steps + channel-verification checklist; commit:
+      → `npm run build` verified the branch: `0.6.0` → `update.json` baked into
+      the manifest; `update_hash` matches the built XPI. Live `release` tag
+      serves `update.json` (HTTP 200). `npm run release` not run — it creates a
+      GitHub release, which the tag push already does in CI (running it by hand
+      collides with the workflow).
+- [x] Document runbook steps + channel-verification checklist; commit:
       `docs: release runbook`.
+      → Added "Release Channel Verification" to `.agent/skills/zotero-ops/SKILL.md`.
 
 **Wave 4 exit:** full suite + build clean; spec conflicts resolved or
 flagged (governance rule) in the spec file.

@@ -39,6 +39,24 @@ function makeAddon(overrides: Record<string, any> = {}) {
           },
           searchAnnotations: async () => overrides.annotations ?? [],
         },
+        citations: {
+          getCurrentStyle: () => overrides.styleID ?? "style-apa",
+          getCurrentStyleName: () => overrides.styleTitle ?? "APA 7th",
+          getStyleByIDOrName: () => overrides.styleID ?? "style-apa",
+          generateCitationWithStyle: () => overrides.citation ?? "(Lee, 2024)",
+          generateBibliographyWithStyle: () =>
+            overrides.bibliography ?? "Lee, S. (2024). A paper.",
+          getCitationSnippets: () => ({
+            citekey: "lee2024",
+            pandoc: "[@lee2024]",
+            latex: "\\cite{lee2024}",
+            typst: "@lee2024",
+          }),
+        },
+        preferences: {
+          get: (_key: string, fallback: any) =>
+            overrides.prefs?.[_key] ?? fallback,
+        },
       },
     },
   };
@@ -313,6 +331,56 @@ describe("SlashCommands", function () {
       expect(out).to.include("The Soundscape");
       expect(out).to.include("Schafer");
       expect(out).to.include("add-context:7");
+    });
+  });
+
+  describe("/cite", function () {
+    after(function () {
+      if ((globalThis as any).__realZotero) {
+        (globalThis as any).Zotero = (globalThis as any).__realZotero;
+        delete (globalThis as any).__realZotero;
+      }
+    });
+
+    function stubItems(item: any) {
+      const realZotero = (globalThis as any).Zotero;
+      if (!(globalThis as any).__realZotero) {
+        (globalThis as any).__realZotero = realZotero;
+      }
+      (globalThis as any).Zotero = {
+        ...realZotero,
+        Items: { getAsync: async () => item },
+      };
+    }
+
+    it("emits top and bottom insert-citation pills carrying the CSL text", async function () {
+      const { addon } = makeAddon({
+        attached: [{ id: 7, title: "The Soundscape" }],
+        citation: "(Schafer, 1977)",
+      });
+      stubItems({ id: 7 });
+
+      const out = (await command("cite").execute(addon, "")) as string;
+      const expectedPayload = encodeURIComponent("(Schafer, 1977)");
+      expect(out).to.include(`insert-citation:top:${expectedPayload}`);
+      expect(out).to.include(`insert-citation:bottom:${expectedPayload}`);
+      // The CSL text itself still renders in the answer.
+      expect(out).to.include("(Schafer, 1977)");
+    });
+
+    it("URL-encodes a citation containing punctuation that would break a link", async function () {
+      const { addon } = makeAddon({
+        attached: [{ id: 7, title: "X" }],
+        citation: "(Smith & Jones, 2020)",
+      });
+      stubItems({ id: 7 });
+
+      const out = (await command("cite").execute(addon, "")) as string;
+      expect(out).to.include(
+        `insert-citation:top:${encodeURIComponent("(Smith & Jones, 2020)")}`,
+      );
+      const linkMatch = out.match(/\[Insert at top of note\]\(([^)]*)\)/);
+      expect(linkMatch).to.not.be.null;
     });
   });
 });
