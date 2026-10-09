@@ -4,8 +4,35 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-10-09
+
 ### Added
 
+- **Batch approval queue (`ApprovalDialog.addPendingChanges`).** A bulk
+  operation — `/bulk-metadata` over a collection, a tag merge — used to raise one
+  modal per change, which does not scale past a handful. The queue now shows a
+  **single** modal listing every change with its own target and diff, each with
+  its own Approve/Deny, plus Approve All / Deny All, and resolves a `boolean[]`
+  in input order.
+  - An undecided row resolves `false` and is never applied, and a modal that
+    fails to render audits **every** queued change `blocked` and rejects — the
+    failure mode is never "the rest were silently applied".
+  - Each decision writes its own `permission` audit entry, so the trail is
+    per-change whether the user answered them one by one or all at once.
+  - The single-change `runWrite` path is untouched; both paths share one generic
+    enqueue, so write-gate compatibility is preserved.
+- **Per-tool permission chips.** The session panel offered three coarse toggles
+  (Citations/Annotations/Tags) that did not correspond to the tools the agent
+  actually advertises. The chips are now built from the `available_commands`
+  list streamed on connect — falling back to the three known tools until it
+  arrives, so the panel is never empty — and toggling one edits the
+  conversation's `allowedTools`, which is persisted with the conversation.
+  - The three states are kept distinct: `null` unrestricted, `[]` block all, a
+    list as an allow-list. Unchecking the last chip yields `[]`, never `null` —
+    that inversion would silently re-enable every tool the user just removed.
+  - The decision logic lives in `src/views/components/toolPerms.ts` (pure, no
+    React) because a React component cannot be mounted in the Zotero sandbox;
+    the transmit path in `HermesClient`/`HermesApiClient` is unchanged.
 - **In-process full-text search (`/find [phrase]`).** `/search` queried metadata
   (title, creator, year) only; it could not answer "which papers mention this
   phrase?". Zotero itself indexes attachment text and exposes a `fulltextContent`
