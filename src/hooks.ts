@@ -37,6 +37,7 @@ import { AuditLog } from "./utils/AuditLog";
 import { getString, initLocale } from "./utils/locale";
 import { registerPrefsScripts } from "./modules/preferenceScript";
 import { createZToolkit } from "./utils/ztoolkit";
+import { SecretVault } from "./utils/SecretVault";
 import type { ContextItem } from "./views/types";
 import { mountHermesChat } from "./views/HermesChatView";
 
@@ -62,6 +63,30 @@ async function onStartup() {
     // Initialize Hermes modules
     const approvalDialog = new ApprovalDialog(addon);
     const preferences = new PreferencesManager(addon);
+    
+    // Migrate API key from preferences to secret vault if present
+    const apiKeyInPrefs = preferences.get<string>("apiKey", "");
+    if (apiKeyInPrefs) {
+      const secretVault = new SecretVault(addon);
+      try {
+        await secretVault.setSecret("apiKey", apiKeyInPrefs);
+        // Verify the migration worked
+        const migratedKey = await secretVault.getSecret("apiKey");
+        if (migratedKey === apiKeyInPrefs) {
+          // Migration successful, clear the preference
+          preferences.set("apiKey", "");
+          auditLog.record("permission", "migrated apiKey to vault", "success");
+        } else {
+          // Migration failed verification
+          auditLog.record("permission", "migrated apiKey to vault", "blocked");
+        }
+      } catch (error) {
+        // Migration failed
+        addon.log(`[SecretVault] Migration failed: ${(error as Error).message}`);
+        auditLog.record("permission", "migrated apiKey to vault", "blocked");
+      }
+    }
+    
     const connectionMode = preferences.getConnectionMode();
     let client;
     if (connectionMode === "api") {
@@ -209,7 +234,7 @@ function registerHermesSidebar(win: _ZoteroTypes.MainWindow): void {
  * view via `createRoot().render()`, but `render()` does not run effects
  * before it returns — it never has, in React 18 or 19 (measured: the
  * subscription effect lands 1-5 ms after `render()` under 18.3.1 and
- * 5-20 ms under 19.3.0). So the view's `onExternalPrompt` subscription may
+ 5-20 ms under 19.3.0). So the view's `onExternalPrompt` subscription may
  * not exist yet when this returns. `ChatManager.dispatchExternalPrompt`
  * buffers the prompt in that case and replays it on the first
  * subscription — so we do not depend on a fixed delay racing the mount
@@ -230,7 +255,7 @@ function openSidebarAndPrompt(
   }
   // Dispatch synchronously. ChatManager buffers the prompt when the
   // ChatView has not subscribed yet (`createRoot().render()` does not run
-  // effects before returning), replaying it on subscribe — so no timer is
+  // effects before it returns), replaying it on subscribe — so no timer is
   // needed here.
   addon.data.hermes?.chat.dispatchExternalPrompt(prompt, contextItems);
 }
@@ -599,11 +624,11 @@ function unregisterHermesSidebar(win: Window): void {
     const itemPane = doc.getElementById("zotero-item-pane") as any;
     if (itemPane && itemPane.getAttribute("collapsed") !== "true") {
       const splitter = itemPane.previousElementSibling as any;
-      itemPane.setAttribute("collapsed", "true");
-      itemPane.removeAttribute("width");
-      itemPane.removeAttribute("height");
-      itemPane.style.width = "";
-      itemPane.style.height = "";
+      splitter.setAttribute("collapsed", "true");
+      splitter.removeAttribute("width");
+      splitter.removeAttribute("height");
+      splitter.style.width = "";
+      splitter.style.height = "";
       if (splitter) {
         splitter.setAttribute("state", "collapsed");
         splitter.setAttribute("substate", "after");
@@ -775,10 +800,6 @@ function onShortcuts(type: string) {
 function onDialogEvents(type: string) {
   // No dialog events implemented
 }
-
-// Add your hooks here. For element click, etc.
-// Keep in mind hooks only do dispatch. Don't add code that does real jobs in hooks.
-// Otherwise the code would be hard to read and maintain.
 
 export default {
   onStartup,

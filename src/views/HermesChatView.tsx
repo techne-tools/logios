@@ -1377,7 +1377,7 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
       />
 
       <MessageList
-        messages={messages}
+        messages={settings.get("showReasoning", true) ? messages : messages.filter(m => m.role !== "reasoning")}
         addon={addon}
         isTyping={isTyping}
         agentName={settings.get("chatAgentName", "Hermes") || "Hermes"}
@@ -1408,7 +1408,7 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
       />
 
       {/* Token Dashboard */}
-      {tokenUsage && (
+      {settings.get("showTokenCount", false) && tokenUsage && (
         <div
           className="hermes-token-dashboard"
           style={{
