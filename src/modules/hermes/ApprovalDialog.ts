@@ -258,7 +258,8 @@ export class ApprovalDialog {
       const doc = Zotero.getMainWindow().document;
 
       const dialogElement = doc.createElement("dialog");
-      dialogElement.className = "hermes-approval-dialog hermes-approval-dialog-batch";
+      dialogElement.className =
+        "hermes-approval-dialog hermes-approval-dialog-batch";
       doc.documentElement?.appendChild(dialogElement);
 
       const results: Array<boolean | undefined> = changes.map(() => undefined);
