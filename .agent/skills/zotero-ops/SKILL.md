@@ -5,7 +5,8 @@ description: Operations, build workflows, syncing, versioning, and release manag
 
 # Zotero Operations Skill
 
-This skill provides operational guidance for the Zotero Hermes plugin project.
+This skill provides operational guidance for the Logios plugin project
+(repo `techne-tools/logios`; formerly "Zotero Hermes").
 
 ## Purpose
 
@@ -73,6 +74,58 @@ Version note: `package.json` may already sit above the last tag (e.g. tagged
 v0.3.2 but package at 0.3.3 — 0.3.3 was released without a tag). Compute the
 bump from `package.json`, and note the tag you create may skip a number.
 
+## Dependency Sync After an Upstream Pull
+
+A fast-forward pull that lands a dependency bump leaves `node_modules` **stale**
+— the tree still compiles, but against the _old_ majors, so the local gates can
+pass while describing a stack the lockfile no longer pins. Always reinstall and
+re-run the gates after pulling.
+
+```bash
+git pull --ff-only origin main
+
+# NODE_ENV=test alone is NOT sufficient on npm 11 when NODE_ENV is already
+# exported as `production`: npm silently omits devDependencies (no tsc, no
+# eslint, no .bin entries) and still prints "added N packages" + success.
+# --include=dev is the explicit override.
+NODE_ENV=test npm ci --include=dev --no-audit --no-fund
+
+# prove the devDeps resolved against the lockfile — do not trust the summary
+node -e "const r=n=>require('./node_modules/'+n+'/package.json').version;\
+console.log(r('react'), r('zotero-plugin-toolkit'))"
+```
+
+Then re-run all three CI gates — they are **separate jobs**, so a green build
+says nothing about lint or tests:
+
+```bash
+npm run build        # zotero-plugin build && tsc --noEmit
+npm run lint:check   # prettier --check . && eslint .   (whole repo, not src test)
+npm test -- --no-watch
+```
+
+Prefer `npm ci` on a clean lockfile — it will not silently rewrite
+`package-lock.json`. If it fails with EUSAGE ("lock file's X does not satisfy
+Y"), the bump did not regenerate the lockfile: `rm -rf node_modules` then
+`NODE_ENV=test npm install` once.
+
+**Verify off the dirty tree, in a throwaway worktree.** The build regenerates
+tracked `typings/prefs.d.ts` on whichever branch it runs on, so never run it
+against dirty main:
+
+```bash
+git worktree add --detach "$TMPDIR/zh-verify" <sha>
+cp .env "$TMPDIR/zh-verify/.env"                    # scaffold needs it
+cp -cR node_modules "$TMPDIR/zh-verify/node_modules" # APFS clone: instant, no extra blocks
+# ... run the gates there ...
+git worktree remove --force "$TMPDIR/zh-verify"
+```
+
+A pull can also refuse to fast-forward on a **typegen-only** modification such
+as `typings/i10n.d.ts`, where the working copy is byte-identical to the
+incoming one. Confirm the equivalence, back the file up, then `git checkout --`
+it before retrying.
+
 ## Quick Reference
 
 ### Common Commands
@@ -104,6 +157,22 @@ bump from `package.json`, and note the tag you create may skip a number.
 > Corollary: **never commit while a gate you just ran is red**, even if the
 > commit is docs-only and "CI only sees committed content". Either fix it in
 > the same commit, or do not commit.
+>
+> **After `prettier --write`, gate the COMMITTED blob, not the working tree.**
+> `--write` fixes the file on disk; if you then commit a narrower file set, the
+> fix stays unstaged and CI checks the unformatted blob you actually pushed —
+> while your local `prettier --check .` passes, because it reads the working
+> tree. A green local check therefore proves nothing about what you pushed.
+> Before pushing, confirm the formatted file is _in_ the commit:
+>
+> ```bash
+> git status --short                    # nothing relevant left dirty/unstaged
+> git show HEAD:<path> > /tmp/blob && npx prettier --check --stdin-filepath <path> < /tmp/blob
+> ```
+>
+> Symptom: CI `lint` red on a file that passes locally. This bit Wave 2 Task 4:
+> a one-line wrap fixed during the _next_ task's lint step was committed only in
+> my working tree, so `ApprovalDialog.ts` failed CI while passing locally.
 
 - [ ] Version bumped in package.json
       (`npm version <patch|minor|major> --no-git-tag-version` — pick the
@@ -157,11 +226,11 @@ d=$(mktemp -d)
 
 # the artifact users will actually download
 curl -sL -o "$d/pub.xpi" \
-  "https://github.com/techne-tools/zotero-hermes/releases/download/$tag/hermes-agent-for-zotero.xpi"
+  "https://github.com/techne-tools/logios/releases/download/$tag/logios.xpi"
 
 # what update.json advertises (strip the "sha512:" prefix -> hex)
 advertised=$(curl -sL \
-  "https://github.com/techne-tools/zotero-hermes/releases/download/release/update.json" \
+  "https://github.com/techne-tools/logios/releases/download/release/update.json" \
   | jq -r '.addons["hermes@techne-tools.org"].updates[0].update_hash' \
   | sed 's/^sha512://')
 

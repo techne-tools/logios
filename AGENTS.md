@@ -77,7 +77,8 @@ these docs current at review time.
 
 ### Zotero Sandbox Constraints (Critical)
 
-Zotero plugins run in a **Firefox 115 ESR sandbox** with severe React limitations:
+Zotero plugins run in a **Firefox 140 ESR sandbox** (Zotero 10; was 115 ESR
+under Zotero 9) with severe React limitations:
 
 1. **Synthetic input events fail** — `onChange` and `onKeyDown` on text inputs do not fire reliably
    - **Pattern**: Use native `addEventListener` via refs for text inputs and window accelerators
@@ -274,3 +275,9 @@ Gotchas learned:
 6. **Test run consumes the built XPI** — `zotero-plugin test` installs the
    addon dir directly and the `.scaffold/build/*.xpi` disappears. Rebuild with
    `NODE_ENV=production npm run build` before installing into a profile.
+
+## Fleet conventions
+
+Stricter-than (never looser than) fleet-wide conventions apply everywhere in the fleet:
+
+@../fleet-conventions.md
