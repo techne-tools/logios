@@ -174,7 +174,7 @@ function bindPrefEvents(): void {
         keyInput?.value ||
         addon.data.hermes?.preferences?.get("apiKey", "") ||
         "";
-      
+
       // Try to get API key from secret vault first
       let apiKey = apiKeyFromPrefs;
       if (!apiKey || apiKey === "") {
@@ -219,27 +219,27 @@ function bindPrefEvents(): void {
   });
 
   // Clear API Key button
-   const clearApiKeyBtn = doc.getElementById(
-     `zotero-prefpane-${config.addonRef}-clear-api-key`,
-   );
-   clearApiKeyBtn?.addEventListener("click", async () => {
-     if (addon.data.hermes?.preferences) {
-       // Clear from both preferences and secret vault
-       addon.data.hermes.preferences.set("apiKey", "");
-       const secretVault = new SecretVault(addon.data.hermes);
-       await secretVault.deleteSecret("apiKey");
-       
-       // Clear the input field
-       const keyInput = doc.getElementById(
-         `zotero-prefpane-${config.addonRef}-api-key`,
-       ) as HTMLInputElement | null;
-       if (keyInput) {
-         keyInput.value = "";
-       }
-       
-       (doc.defaultView as any)?.alert("API key cleared successfully.");
-     }
-   });
+  const clearApiKeyBtn = doc.getElementById(
+    `zotero-prefpane-${config.addonRef}-clear-api-key`,
+  );
+  clearApiKeyBtn?.addEventListener("click", async () => {
+    if (addon.data.hermes?.preferences) {
+      // Clear from both preferences and secret vault
+      addon.data.hermes.preferences.set("apiKey", "");
+      const secretVault = new SecretVault(addon.data.hermes);
+      await secretVault.deleteSecret("apiKey");
+
+      // Clear the input field
+      const keyInput = doc.getElementById(
+        `zotero-prefpane-${config.addonRef}-api-key`,
+      ) as HTMLInputElement | null;
+      if (keyInput) {
+        keyInput.value = "";
+      }
+
+      (doc.defaultView as any)?.alert("API key cleared successfully.");
+    }
+  });
 
   // Reset Onboarding button
   const resetOnboardingBtn = doc.getElementById(

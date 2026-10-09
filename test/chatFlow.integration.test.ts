@@ -136,13 +136,9 @@ describe("Chat lifecycle integration", function () {
 
     chat.addMessage(makeMessage({ role: "user", content: "Long question" }));
 
-    // Streaming begins and is cancelled before the stop event. The view's
-    // buffer is discarded; nothing is committed to ChatManager.
-    let partial = "Half an ans";
+    // Streaming begins, then the user cancels: the view discards its buffer and
+    // commits nothing, so ChatManager never receives an assistant turn.
     await tick();
-    expect(partial).to.equal("Half an ans");
-    partial = ""; // cancel discards the buffer
-
     chat.flush();
 
     const persisted = store.loadConversation(conv.id);

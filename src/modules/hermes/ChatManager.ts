@@ -67,7 +67,9 @@ export class ChatManager {
     // Apply memory cap: keep only the most recent MAX_MEMORY_MESSAGES
     if (newMessages.length > MAX_MEMORY_MESSAGES) {
       // Keep the most recent messages
-      this.messages = newMessages.slice(newMessages.length - MAX_MEMORY_MESSAGES);
+      this.messages = newMessages.slice(
+        newMessages.length - MAX_MEMORY_MESSAGES,
+      );
       // Add marker message indicating truncation
       const markerMessage: ChatMessage = {
         id: `marker-${Date.now()}`,

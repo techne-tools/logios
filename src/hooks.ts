@@ -63,7 +63,7 @@ async function onStartup() {
     // Initialize Hermes modules
     const approvalDialog = new ApprovalDialog(addon);
     const preferences = new PreferencesManager(addon);
-    
+
     // Migrate API key from preferences to secret vault if present
     const apiKeyInPrefs = preferences.get<string>("apiKey", "");
     if (apiKeyInPrefs) {
@@ -82,11 +82,13 @@ async function onStartup() {
         }
       } catch (error) {
         // Migration failed
-        addon.log(`[SecretVault] Migration failed: ${(error as Error).message}`);
+        addon.log(
+          `[SecretVault] Migration failed: ${(error as Error).message}`,
+        );
         auditLog.record("permission", "migrated apiKey to vault", "blocked");
       }
     }
-    
+
     const connectionMode = preferences.getConnectionMode();
     let client;
     if (connectionMode === "api") {

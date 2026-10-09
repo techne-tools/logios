@@ -372,7 +372,7 @@ export class HermesApiClient implements ChatClient {
     if (secret !== null && secret !== "") {
       return secret;
     }
-    
+
     // Fall back to preferences
     return this.addon.data.hermes?.preferences?.get<string>("apiKey", "") || "";
   }

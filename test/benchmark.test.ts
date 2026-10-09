@@ -28,26 +28,29 @@ class MockChatClient {
   async sendPrompt(
     _text: string,
     _contextItems: any,
-    _options: any
+    _options: any,
   ): Promise<void> {
     // Simulate sending a prompt and receiving a response
     setTimeout(() => {
       // Send a simple response
-      this.updateCallbacks.forEach(cb => {
+      this.updateCallbacks.forEach((cb) => {
         cb({ type: "message", content: "Response" });
-        
+
         // Send usage info
-        cb({ type: "usage", usage: { inputTokens: 5, outputTokens: 3, totalTokens: 8 } });
-        
+        cb({
+          type: "usage",
+          usage: { inputTokens: 5, outputTokens: 3, totalTokens: 8 },
+        });
+
         // Send stop signal
         cb({ type: "stop" });
       });
-      });
+    });
   }
 
   cancel(): void {
     // Simulate cancellation
-    this.errorCallbacks.forEach(cb => {
+    this.errorCallbacks.forEach((cb) => {
       cb(new Error("Cancelled"));
     });
   }
@@ -87,7 +90,7 @@ function makeAddonWithMockClient() {
       saved.length = 0;
     },
     loadConversation: (id: string): Conversation | null => {
-      return saved.find(c => c.id === id) || null;
+      return saved.find((c) => c.id === id) || null;
     },
     loadAllConversations: (): Conversation[] => {
       return [...saved].sort((a, b) => b.updatedAt - a.updatedAt);
@@ -103,7 +106,7 @@ function makeAddonWithMockClient() {
       };
       saved.push(conv);
       return conv;
-    }
+    },
   };
 
   const addon = {
@@ -114,31 +117,34 @@ function makeAddonWithMockClient() {
           get: (key: string, defaultValue: any) => {
             // Default preferences for testing
             const defaults: Record<string, any> = {
-              "autoSave": true,
-              "showReasoning": true,
-              "enableTypingSound": false,
-              "enableHapticFeedback": false,
-              "showToolUse": true,
-              "showTokenCount": false,
-              "enableTags": true,
-              "hasSeenOnboarding": false,
-              "chatAgentName": "Hermes"
+              autoSave: true,
+              showReasoning: true,
+              enableTypingSound: false,
+              enableHapticFeedback: false,
+              showToolUse: true,
+              showTokenCount: false,
+              enableTags: true,
+              hasSeenOnboarding: false,
+              chatAgentName: "Hermes",
             };
             return key in defaults ? defaults[key] : defaultValue;
           },
           set: (key: string, value: any) => {
             // Mock implementation
-          }
-        }
-      }
+          },
+        },
+      },
     },
     log: (message: string) => {
       // In benchmark mode, we want to capture Zotero.debug output
-      if (typeof process !== 'undefined' && process.env && process.env.HERMES_BENCH === "1") {
-        // eslint-disable-next-line no-console
+      if (
+        typeof process !== "undefined" &&
+        process.env &&
+        process.env.HERMES_BENCH === "1"
+      ) {
         console.log(`[Zotero.debug] ${message}`);
       }
-    }
+    },
   } as unknown as Addon;
 
   return { addon, conversations, saved };
@@ -153,17 +159,13 @@ function createSyntheticItem(id: number): any {
     key: `SYNTH${id}`,
     getDisplayTitle: () => `Synthetic Item ${id}`,
     itemType: "journalArticle",
-    getCreators: () => [
-      { lastName: "Author", firstName: `Test${id}` }
-    ],
+    getCreators: () => [{ lastName: "Author", firstName: `Test${id}` }],
     getDate: () => "2023",
-    getAbstract: () => `This is a synthetic abstract for item ${id}. ` +
-                      `It contains some text to make it realistic. ` +
-                      `Lorem ipsum dolor sit amet, consectetur adipiscing elit.`,
-    getTags: () => [
-      { tag: `tag${id % 5}` },
-      { tag: `example` }
-    ],
+    getAbstract: () =>
+      `This is a synthetic abstract for item ${id}. ` +
+      `It contains some text to make it realistic. ` +
+      `Lorem ipsum dolor sit amet, consectetur adipiscing elit.`,
+    getTags: () => [{ tag: `tag${id % 5}` }, { tag: `example` }],
     getURL: () => `https://example.com/item/${id}`,
     getDOI: () => `10.1234/synth${id}`,
     getBestAttachment: async () => {
@@ -175,11 +177,11 @@ function createSyntheticItem(id: number): any {
         getPath: () => () => ({
           pathToFile: () => ({
             exists: () => true,
-            isDirectory: false
-          })
-        })
+            isDirectory: false,
+          }),
+        }),
       };
-    }
+    },
   };
 }
 
@@ -188,75 +190,83 @@ function createSyntheticItem(id: number): any {
  * Only runs when HERMES_BENCH=1 environment variable is set
  */
 describe("Benchmark Test", function () {
-  console.log("BENCHMARK TEST STARTING");
-  this.timeout(60000); // Increase timeout for benchmark operations
-
   it("should benchmark extractItemData × 100 and setMessages × 1000", async function () {
+    this.timeout(60000); // Increase timeout for benchmark operations
+
     // Only run if HERMES_BENCH=1 is set
-    if (typeof process === 'undefined' || !process.env || process.env.HERMES_BENCH !== "1") {
+    if (
+      typeof process === "undefined" ||
+      !process.env ||
+      process.env.HERMES_BENCH !== "1"
+    ) {
       this.skip();
       return;
     }
 
     const { addon, saved } = makeAddonWithMockClient();
     const chatManager = new ChatManager(addon);
-    
+
     // Start with a new conversation
     addon.data.hermes.conversations.createConversation();
-    
+
     // Benchmark extractItemData equivalent (creating synthetic items)
     console.log("[Zotero.debug] Benchmark: extractItemData × 100");
     const startTimeExtract = Date.now();
-    
+
     const syntheticItems = [];
     for (let i = 0; i < 100; i++) {
       const item = createSyntheticItem(i);
       syntheticItems.push(item);
-      
+
       // Simulate attaching the item (which would call extractItemData internally)
       // For this benchmark, we'll just create the items
     }
-    
+
     const endTimeExtract = Date.now();
     const extractTime = endTimeExtract - startTimeExtract;
     console.log(`[Zotero.debug] extractItemData × 100 took ${extractTime}ms`);
-    
+
     // Benchmark setMessages × 1000
     console.log("[Zotero.debug] Benchmark: setMessages × 1000");
     const startTimeSetMessages = Date.now();
-    
+
     for (let i = 0; i < 1000; i++) {
       // Create a batch of messages
       const messages: ChatMessage[] = [];
-      for (let j = 0; j < 5; j++) { // 5 messages per batch
+      for (let j = 0; j < 5; j++) {
+        // 5 messages per batch
         messages.push({
           id: `msg_${i}_${j}`,
           role: j % 2 === 0 ? "user" : "assistant",
           content: `This is message ${j} in batch ${i}`,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
       }
-      
+
       // Set the messages (this triggers the cap logic)
       chatManager.setMessages(messages);
     }
-    
+
     const endTimeSetMessages = Date.now();
     const setMessagesTime = endTimeSetMessages - startTimeSetMessages;
     console.log(`[Zotero.debug] setMessages × 1000 took ${setMessagesTime}ms`);
-    
+
     // Verify that the cap is working correctly
     const currentMessages = chatManager.getMessages();
-    console.log(`[Zotero.debug] Final message count: ${currentMessages.length}`);
-    
+    console.log(
+      `[Zotero.debug] Final message count: ${currentMessages.length}`,
+    );
+
     // With our cap of 300, and sending 5000 messages (1000 batches × 5),
     // we should end up with at most 300 + 1 marker message (if capped)
     expect(currentMessages.length).to.be.lessThanOrEqual(301);
-    
+
     // If we have more than 300 messages, the first one should be a marker
     if (currentMessages.length > 300) {
       expect(currentMessages[0].role).to.equal("system");
-      expect(currentMessages[0].content).to.equal("earlier messages in saved conversation");
+      expect(currentMessages[0].content).to.equal(
+        "earlier messages in saved conversation",
+      );
     }
   });
 });

@@ -1377,7 +1377,11 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
       />
 
       <MessageList
-        messages={settings.get("showReasoning", true) ? messages : messages.filter(m => m.role !== "reasoning")}
+        messages={
+          settings.get("showReasoning", true)
+            ? messages
+            : messages.filter((m) => m.role !== "reasoning")
+        }
         addon={addon}
         isTyping={isTyping}
         agentName={settings.get("chatAgentName", "Hermes") || "Hermes"}

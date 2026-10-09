@@ -66,9 +66,11 @@ test in the owning task:
 ### Task 1: User guide + FAQ
 
 **Files:**
+
 - Create: `docs/user-guide.md`, `docs/faq.md`
 
 **Interfaces:**
+
 - Produces: docs grounded in PRODUCT.md feature table and the actual
   `BUILT_IN_COMMANDS` list — no invented features.
 
@@ -85,6 +87,7 @@ test in the owning task:
 ### Task 2: Secrets vault
 
 **Files:**
+
 - Create: `src/utils/SecretVault.ts`, `test/secretVault.test.ts`
 - Modify: `src/modules/hermes/HermesApiClient.ts` (`getApiKey`),
   `src/modules/preferenceScript.ts` (connection test), preferences UI API-key
@@ -93,6 +96,7 @@ test in the owning task:
 - Test: `test/secretVault.test.ts`
 
 **Interfaces:**
+
 - Consumes: `Zotero.Prefs`, `Zotero.File.putContentsAsync/getContents`, profile
   dir resolution pattern from `src/utils/zoteroPaths.ts`.
 - Produces: `SecretVault.setSecret(name, value): Promise<void>`,
@@ -123,12 +127,14 @@ test in the owning task:
 ### Task 3: Stability infrastructure
 
 **Files:**
+
 - Create: `test/chatFlow.integration.test.ts`, `test/writeGates.integration.test.ts`,
   `test/benchmark.test.ts`
 - Modify: `src/modules/hermes/ChatManager.ts` (cap), `src/views/HermesChatView.tsx`
   (conditional mounting of SidePanels / TokenDashboard / reasoning panes)
 
 **Interfaces:**
+
 - Consumes: existing `ChatManager` API and `ConversationManager.loadConversation`;
   mock `ChatClient` pattern from existing unit tests.
 - Produces: `ChatManager` exposes `MAX_MEMORY_MESSAGES: 300` (exported
@@ -169,11 +175,13 @@ clean.
 ### Task 4: Approval-batch UX (@designer)
 
 **Files:**
+
 - Modify: `src/modules/hermes/ApprovalDialog.ts` (add queue API + multi-change
   modal), dialog markup/styles for the approval dialog
 - Test: `test/approvalDialogBatch.test.ts`
 
 **Interfaces:**
+
 - Consumes: `PendingFileChange` shape from `src/modules/hermes/types.ts`;
   `runWrite` calls `addPendingChange` per change (unchanged).
 - Produces: `ApprovalDialog.addPendingChanges(changes): Promise<boolean[]>`
@@ -193,11 +201,13 @@ clean.
 ### Task 5: Per-tool permission UI (@designer)
 
 **Files:**
+
 - Modify: feature-toggles area in `HermesChatView` / `InputArea` (chips built
   from `available_commands`)
 - Test: `test/toolPerms.test.ts`
 
 **Interfaces:**
+
 - Consumes: `available_commands` updates already streamed to the client;
   conversation `allowedTools` schema (`null` / `[]` / list) — no schema
   change.
@@ -215,18 +225,20 @@ clean.
 ### Task 6: Collection-level synthesis (@fixer, after 3s design check)
 
 **Files:**
+
 - Create: `src/modules/hermes/SynthesisManager.ts`, `test/synthesis.test.ts`
 - Modify: `src/modules/hermes/SlashCommands.ts` (`/synthesize`), types if a
   new context type is required
 
 **Interfaces:**
+
 - Consumes: `ItemManager.attachCollection` (existing), client
   `sendPrompt(text, contextItems, options)` streaming, `buildItemContext`.
 - Produces (exact signatures): `splitIntoBatches(ids: string[], size = 10):
-  string[][]`; `buildBatchPrompt(batch: string[], focus: string): string`;
+string[][]`; `buildBatchPrompt(batch: string[], focus: string): string`;
   `foldPrompt(summaries: string[], focus: string): string`; cache
   `getSummary(id: string): string | null` / `putSummary(id: string, summary:
-  string): void` (LRU, cap 200).
+string): void` (LRU, cap 200).
 
 - [ ] Failing unit tests: 30 ids → 3 batches of exact ids; batch prompt
       names each item and `focus`; fold prompt contains all summaries;
@@ -250,6 +262,7 @@ clean.
 ### Task 7: Reader-tab sidebar panel (@designer, spike-first)
 
 **Files (contingent on spike):**
+
 - Modify: `src/hooks.ts` (reader registration), one new
   `src/views/components/ReaderPanel.ts` host wrapper
 - Spec section: 6
@@ -269,6 +282,7 @@ clean.
 ### Task 8: Sidecar tier (design first via @oracle)
 
 **Files (post-design):**
+
 - Create: `src/modules/hermes/sidecar/SidecarManager.ts`,
   `test/sidecar.test.ts`, pref `enableSidecar` (default false) in default
   prefs + PreferencesManager
@@ -292,6 +306,7 @@ clean.
 ### Task 9: Inline writing integration
 
 **Files:**
+
 - Modify: `src/modules/hermes/SlashCommands.ts` (`insert-citation:` pill
   handling), `src/views/components/ChatMessageItem.tsx` (pill renderer)
 - Test: `test/citationPill.test.ts`
@@ -306,6 +321,7 @@ clean.
 ### Task 10: Ghost-text feasibility spike (report only)
 
 **Files:**
+
 - Create: `docs/superpowers/spikes/ghost-text-spike.md`
 
 - [ ] Investigate Zotero 10 note editor hook points (events, overlays,
@@ -315,6 +331,7 @@ clean.
 ### Task 11: Release channel verification
 
 **Files:**
+
 - Modify: `.agent/skills/zotero-ops/SKILL.md` (release runbook + channel
   checklist)
 

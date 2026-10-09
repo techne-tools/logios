@@ -49,7 +49,8 @@ A: Yes. Set your Obsidian vault path in Preferences → Hermes → Obsidian Vaul
 A: Use `/persona [name]` where name is one of `researcher` (default), `citation`, or `analyst`. Run `/persona` without arguments to see the current persona.
 
 **Q: What do the different personas do?**  
-A: 
+A:
+
 - `researcher`: General-purpose research assistance.
 - `citation`: Optimized for citation and bibliography tasks.
 - `analyst`: Focused on literature analysis, gap finding, and synthesis.
@@ -63,7 +64,8 @@ A: The audit log is internal to Hermes and used for troubleshooting. It is not e
 ## Troubleshooting
 
 **Q: Hermes shows "Health-check failed" in the status bar. What does this mean?**  
-A: The health-check verifies that Hermes can communicate with its backend (local binary for ACP mode or gateway for API mode). 
+A: The health-check verifies that Hermes can communicate with its backend (local binary for ACP mode or gateway for API mode).
+
 - For ACP mode: Ensure the `hermes` binary is installed and discoverable in your PATH or configured in preferences.
 - For API mode: Check the gateway URL and network connectivity, and verify the API key is valid.
 
@@ -71,7 +73,8 @@ A: The health-check verifies that Hermes can communicate with its backend (local
 A: Hermes binds to the active Zotero profile at startup. To switch profiles, restart Zotero with the desired profile active, then restart Hermes (toggle the plugin off/on or restart Zotero).
 
 **Q: My Obsidian exports are not working. What should I check?**  
-A: 
+A:
+
 1. Verify the Obsidian vault path is set correctly in Preferences → Hermes → Obsidian Vault Path.
 2. Ensure the vault path points to a valid directory.
 3. Check that the directory is writable.

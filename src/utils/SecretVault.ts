@@ -2,7 +2,7 @@ import { ensureHermesDir, getProfileDir } from "./zoteroPaths";
 
 /**
  * Secure secret storage for sensitive values like API keys.
- * 
+ *
  * Secrets are stored in <profile>/hermes-secrets.json with file permissions 0o600.
  * Values are held in-memory for the session to avoid frequent disk I/O.
  */
@@ -25,7 +25,7 @@ export class SecretVault {
     if (!profileDir) {
       throw new Error("Unable to determine profile directory");
     }
-    
+
     const hermesDir = ensureHermesDir(profileDir, "", this.addon);
     const filePath = hermesDir + "/" + this.secretFileName;
     return Zotero.File.pathToFile(filePath);
@@ -44,7 +44,7 @@ export class SecretVault {
 
       const content = Zotero.File.getContents(file) as string;
       const parsed = JSON.parse(content);
-      
+
       if (typeof parsed === "object" && parsed !== null) {
         for (const [key, value] of Object.entries(parsed)) {
           if (typeof value === "string") {
@@ -54,7 +54,9 @@ export class SecretVault {
       }
     } catch (error) {
       // Don't throw - if we can't load secrets, we'll just start with an empty cache
-      this.addon.log(`[SecretVault] Failed to load secrets: ${(error as Error).message}`);
+      this.addon.log(
+        `[SecretVault] Failed to load secrets: ${(error as Error).message}`,
+      );
     }
   }
 
@@ -64,26 +66,30 @@ export class SecretVault {
   private async saveSecrets(): Promise<void> {
     try {
       const file = this.getSecretsFile();
-      
+
       // Convert Map to plain object for JSON serialization
       const obj: Record<string, string> = {};
       for (const [key, value] of this.secrets.entries()) {
         obj[key] = value;
       }
-      
+
       const content = JSON.stringify(obj, null, 2);
       Zotero.File.putContents(file, content);
-      
+
       // Set file permissions to 0o600 (owner read/write only)
       try {
         file.permissions = 0o600;
       } catch (permError) {
         // Some systems might not support changing permissions via this method
         // Log but don't fail - the file might already have correct permissions
-        this.addon.log(`[SecretVault] Warning: Could not set file permissions: ${(permError as Error).message}`);
+        this.addon.log(
+          `[SecretVault] Warning: Could not set file permissions: ${(permError as Error).message}`,
+        );
       }
     } catch (error) {
-      this.addon.log(`[SecretVault] Failed to save secrets: ${(error as Error).message}`);
+      this.addon.log(
+        `[SecretVault] Failed to save secrets: ${(error as Error).message}`,
+      );
       throw error;
     }
   }
@@ -97,11 +103,11 @@ export class SecretVault {
     if (!name || typeof name !== "string") {
       throw new Error("Secret name must be a non-empty string");
     }
-    
+
     if (value === undefined || value === null) {
       throw new Error("Secret value must be provided");
     }
-    
+
     this.secrets.set(name, value);
     await this.saveSecrets();
   }
@@ -115,12 +121,12 @@ export class SecretVault {
     if (!name || typeof name !== "string") {
       throw new Error("Secret name must be a non-empty string");
     }
-    
+
     // Return from memory cache if available
     if (this.secrets.has(name)) {
       return this.secrets.get(name) ?? null;
     }
-    
+
     // If not in memory, try to load from file (in case it was added by another process)
     await this.loadSecrets();
     return this.secrets.get(name) ?? null;
@@ -134,7 +140,7 @@ export class SecretVault {
     if (!name || typeof name !== "string") {
       throw new Error("Secret name must be a non-empty string");
     }
-    
+
     this.secrets.delete(name);
     await this.saveSecrets();
   }

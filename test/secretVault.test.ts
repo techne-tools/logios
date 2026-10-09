@@ -3,7 +3,7 @@ import { SecretVault } from "../src/utils/SecretVault";
 
 /**
  * Test the SecretVault class.
- * 
+ *
  * These tests run against the REAL Zotero runtime booted by the test harness.
  */
 describe("SecretVault (live Zotero runtime)", function () {
@@ -11,7 +11,7 @@ describe("SecretVault (live Zotero runtime)", function () {
   const testAddon = {
     log: (message: string, ...args: any[]) => {
       console.log(`[SecretVaultTest] ${message}`, ...args);
-    }
+    },
   };
 
   beforeEach(async function () {
@@ -60,7 +60,7 @@ describe("SecretVault (live Zotero runtime)", function () {
     await vault.setSecret("key1", "value1");
     await vault.setSecret("key2", "value2");
     await vault.setSecret("key3", "value3");
-    
+
     const secrets = await vault.listSecrets();
     expect(secrets).to.have.lengthOf(3);
     expect(secrets).to.include("key1");
@@ -71,7 +71,7 @@ describe("SecretVault (live Zotero runtime)", function () {
   it("should persist secrets to disk and reload them", async function () {
     // Store a secret
     await vault.setSecret("persistentKey", "persistentValue");
-    
+
     // Create a new vault instance to simulate restart
     const vault2 = new SecretVault(testAddon);
     const value = await vault2.getSecret("persistentKey");
@@ -97,15 +97,19 @@ describe("SecretVault (live Zotero runtime)", function () {
       expect.fail("Expected error for empty secret name");
     } catch (error) {
       expect(error).to.be.instanceOf(Error);
-      expect(error.message).to.contain("Secret name must be a non-empty string");
+      expect(error.message).to.contain(
+        "Secret name must be a non-empty string",
+      );
     }
-    
+
     try {
       await vault.setSecret(null as any, "value");
       expect.fail("Expected error for null secret name");
     } catch (error) {
       expect(error).to.be.instanceOf(Error);
-      expect(error.message).to.contain("Secret name must be a non-empty string");
+      expect(error.message).to.contain(
+        "Secret name must be a non-empty string",
+      );
     }
   });
 

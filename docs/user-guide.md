@@ -12,11 +12,13 @@
 Hermes operates in two modes:
 
 ### ACP (Local) Mode
+
 - Spawns a local `hermes` binary via stdio/NDJSON (JSON-RPC 2.0).
 - Data remains on your machine; no external transmission.
 - The binary path is configured via Preferences → Hermes → Binary Path or automatically discovered from your system PATH.
 
 ### API (Remote) Mode
+
 - Connects to a remote `hermes gateway` via HTTP/SSE.
 - Configure the gateway URL in Hermes preferences.
 - Uses OpenAI-compatible format for compatibility with other clients.
@@ -36,34 +38,34 @@ Provide Hermes with items from your library to ground its responses:
 
 Hermes provides the following slash commands for library operations and agent control:
 
-| Command | Description |
-|---------|-------------|
-| `/clear` | Clear the current conversation |
-| `/context` | Add selected Zotero items to context |
-| `/collection` | Attach all top-level items from the selected Zotero collection into context |
-| `/help` | Show available slash commands |
-| `/savechat` | Save current conversation as a Zotero note |
-| `/export` | Export conversation as Markdown (Obsidian-ready) |
-| `/compare` | Perform a structured comparative synthesis across attached items |
-| `/gaps` | Identify literature gaps in attached literature |
-| `/draft-litreview` | Draft a publication-ready literature review |
-| `/search` | Search notes and library items and add them to context |
-| `/annotations` | List PDF annotations for the attached item |
-| `/cite` | Generate in-text citation and bibliography for the attached item |
-| `/tag` | Suggest or apply tags for the attached item |
-| `/persona` | Switch agent persona (researcher, citation, analyst) |
-| `/metadata` | View or update metadata for attached item |
-| `/canvas` | Export conversation and attached papers to an Obsidian Canvas graph |
-| `/organize-tags` | Analyze library/item tags and propose a clean taxonomy |
-| `/timeline` | Generate a chronological literature evolution map |
-| `/critique` | Conduct a rigorous peer-review methodological critique |
-| `/quiz` | Generate hard seminar discussion questions and exam traps |
-| `/doi` | Look up a DOI via CrossRef/DataCite or find one from attached item's title |
-| `/cites` | Reverse-citation lookup: which works cite the attached item's DOI |
-| `/bulk-metadata` | Edit metadata across every item in the selected collection |
-| `/bulk-field` | Edit metadata across every item attached to the conversation |
-| `/anno-edit` | Edit annotations in place |
-| `/anno-search` | Search annotations across the whole library |
+| Command            | Description                                                                 |
+| ------------------ | --------------------------------------------------------------------------- |
+| `/clear`           | Clear the current conversation                                              |
+| `/context`         | Add selected Zotero items to context                                        |
+| `/collection`      | Attach all top-level items from the selected Zotero collection into context |
+| `/help`            | Show available slash commands                                               |
+| `/savechat`        | Save current conversation as a Zotero note                                  |
+| `/export`          | Export conversation as Markdown (Obsidian-ready)                            |
+| `/compare`         | Perform a structured comparative synthesis across attached items            |
+| `/gaps`            | Identify literature gaps in attached literature                             |
+| `/draft-litreview` | Draft a publication-ready literature review                                 |
+| `/search`          | Search notes and library items and add them to context                      |
+| `/annotations`     | List PDF annotations for the attached item                                  |
+| `/cite`            | Generate in-text citation and bibliography for the attached item            |
+| `/tag`             | Suggest or apply tags for the attached item                                 |
+| `/persona`         | Switch agent persona (researcher, citation, analyst)                        |
+| `/metadata`        | View or update metadata for attached item                                   |
+| `/canvas`          | Export conversation and attached papers to an Obsidian Canvas graph         |
+| `/organize-tags`   | Analyze library/item tags and propose a clean taxonomy                      |
+| `/timeline`        | Generate a chronological literature evolution map                           |
+| `/critique`        | Conduct a rigorous peer-review methodological critique                      |
+| `/quiz`            | Generate hard seminar discussion questions and exam traps                   |
+| `/doi`             | Look up a DOI via CrossRef/DataCite or find one from attached item's title  |
+| `/cites`           | Reverse-citation lookup: which works cite the attached item's DOI           |
+| `/bulk-metadata`   | Edit metadata across every item in the selected collection                  |
+| `/bulk-field`      | Edit metadata across every item attached to the conversation                |
+| `/anno-edit`       | Edit annotations in place                                                   |
+| `/anno-search`     | Search annotations across the whole library                                 |
 
 > **Note**: Commands that modify Zotero data (metadata, tags, annotations) require approval via the approval dialog and are recorded in the audit log.
 
