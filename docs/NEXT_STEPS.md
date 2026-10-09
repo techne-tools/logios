@@ -18,9 +18,9 @@ Plan and spec (authoritative):
    `ChatManager` holds messages; they never construct an `ApprovalDialog`, call
    `runWrite`, or reach `ItemManager.updateItemMetadataGated`. Either wire them
    to the real gate or fold the coverage into the existing unit suites.
-2. **Close the typecheck hole.** Add `test/` to a typecheck gate (a dedicated
-   `tsconfig.test.json`, or `include` `test/` from the root project) so the
-   next "phantom syntax error" is a real compiler error at the gate.
+2. ~~**Close the typecheck hole.**~~ **Done** — `tsconfig.test.json` +
+   `npm run typecheck:test`, run in CI's build job (`test/tsconfig.json` now
+   extends it instead of being a no-op).
 
 ## Short term
 
