@@ -147,6 +147,40 @@ batch 2 is named in the output.
 **Success (if feasible)**: opening a PDF tab shows the chat panel toggle;
 asking about a selection from the panel attaches that page's context.
 
+**SPIKE RESULT (2026-10-09) — a reader-chrome panel is NOT reachable. Resolved:
+fall back to the library pane.** Verified against the Zotero 10.0.6 bundle
+(`omni.ja` → `chrome/content/zotero/xpcom/reader.js`, `reader.xhtml`,
+`resource/reader/reader.js`):
+
+- `Zotero.Reader.registerEventListener(type, handler, pluginID)` is a thin
+  dispatcher. It only runs for the seven names in `ReaderEventMap`:
+  `renderTextSelectionPopup`, `renderSidebarAnnotationHeader`, `renderToolbar`,
+  `createColorContextMenu`, `createViewContextMenu`,
+  `createAnnotationContextMenu`, `createThumbnailContextMenu`,
+  `createSelectorContextMenu`. There is **no panel/canvas hook**, and the plan's
+  "render hook" is not one of them.
+- The reader iframe emits `CustomEvent('customEvent')` with `type: render${type}`
+  (or a menu name). Each `append()` is bound to a **fixed React container** —
+  `sectionRef.current.append(section)` — and per the reader's own source must be
+  called "directly and synchronously in the event" (it throws otherwise).
+  So listeners can inject _into a designated slot_, not mount an arbitrary
+  `div`/React root in the reader chrome.
+- The reader sidebar is Zotero's own annotation pane, addressed via
+  `Zotero_Tabs.getSidebarState('reader')`; it exposes no plugin section API.
+
+**Consequence.** The only sandbox-safe reader surfaces are the toolbar button
+and the two context menus — which the plugin **already uses**
+(`registerReaderActions()`, `src/hooks.ts:298`: `renderTextSelectionPopup` +
+`createViewContextMenu` → attach the reader's item, build the prompt, open the
+library sidebar). A full reader-hosted chat panel would require reaching into
+private internals (`_tabContainer`, `_iframeWindow`, the reader iframe DOM) that
+Zotero does not expose and may move — not viable for this plugin.
+
+**Decision**: keep the shipped behaviour (reader toolbar/context-menu actions →
+library-sidebar chat) as the reader integration. Do not build a reader-chrome
+panel. The "chat beside the PDF" intent is satisfied by the sidebar, opened
+beside the reader in a split layout. Fallback recorded in `TODO.md`.
+
 ## 7. Sidecar tier (additive; degrade-graceful)
 
 **Intent**: capability the plugin genuinely cannot host — embeddings, OCR,
@@ -220,6 +254,7 @@ that build; a clean `release/` channel read confirms stable path.
 
 1. Sidecar runtime: `hermes sidecar` subcommand vs standalone script?
    (Oracle review resolves.)
-2. Reader panel: inject into reader chrome vs Zotero primary-pane tab?
-   (Designer spike resolves.)
+2. ~~Reader panel: inject into reader chrome vs Zotero primary-pane tab?~~
+   **RESOLVED 2026-10-09** — neither; the reader chrome has no panel hook (see
+   §6 spike result). Keep toolbar/context-menu actions → library sidebar.
 3. Ghost text: feasible in sandbox at all? (Spike resolves.)

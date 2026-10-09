@@ -601,6 +601,16 @@ All features must follow Logios coding conventions.
    previously read "context items are the library access point", which was
    false.)_
 2. Direct cloud syncing for multi-vault topologies remains a future consideration.
+3. **Reader-chrome chat panel: not feasible (2026-10-09).** Zotero 10 exposes no
+   hook to mount a panel inside the PDF reader. `Zotero.Reader.registerEventListener`
+   only fires for seven fixed slots (`renderTextSelectionPopup`,
+   `renderSidebarAnnotationHeader`, `renderToolbar`, and four context menus), and
+   each `append()` is bound to a designated React container that must be filled
+   synchronously — it cannot host an arbitrary DOM/React root. Reader integration
+   therefore stays as shipped: selection-popup button + "Explain/Critique"
+   context menus → open the library-sidebar chat (`src/hooks.ts`
+   `registerReaderActions()`). The "chat beside the PDF" intent is met by the
+   sidebar in a split layout. See spec §6 and open question 6.2, both resolved.
 
 ---
 

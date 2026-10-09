@@ -267,17 +267,25 @@ string): void` (LRU, cap 200).
   `src/views/components/ReaderPanel.ts` host wrapper
 - Spec section: 6
 
-- [ ] Spike: inject a host `box` into reader chrome via
+- [x] Spike: inject a host `box` into reader chrome via
       `Zotero.Reader.registerEventListener` render hook in a scratch branch;
       mount/unmount React root; verify sandbox-safe (native listeners only).
       Report feasibility.
+      → **2026-10-09: INFEASIBLE.** No panel hook exists — the dispatcher fires
+      only for the seven `ReaderEventMap` slots, and `append()` is bound to a
+      fixed React container that must be filled synchronously. Report:
+      `docs/superpowers/spikes/reader-panel-spike.md`.
 - [ ] On feasible: implement toggle + mounting the existing `HermesChatView`
       instance scoped to the reader context; auto-attach selection/page/item
       on prompt from this surface sharing ConversationManager storage.
-- [ ] Infeasible: record finding in TODO.md + spec open-question; stop lane.
+      → **Not applicable (lane stops).**
+- [x] Infeasible: record finding in TODO.md + spec open-question; stop lane.
 - [ ] Verify: open PDF tab → toggle chat panel → selection prompt attaches
       reader context; conversation persists and reopens in library sidebar too.
-- [ ] Commit: `feat: reader chat panel` (or `docs+todo: reader injection infeasible`).
+      → **Not applicable.** Existing behaviour kept: reader toolbar/context
+      actions → library sidebar.
+- [x] Commit: `feat: reader chat panel` (or `docs+todo: reader injection infeasible`).
+      → `docs: reader-panel panel infeasible — keep toolbar/context-menu → sidebar`.
 
 ### Task 8: Sidecar tier (design first via @oracle)
 
