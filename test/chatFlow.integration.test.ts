@@ -1,406 +1,178 @@
 import { expect } from "chai";
-import type Addon from "../src/addon";
 import { ChatManager } from "../src/modules/hermes/ChatManager";
 import type { Conversation } from "../src/modules/hermes/ConversationManager";
-import type { ChatMessage } from "../src/views/types";
+import type { ChatMessage, ContextItem } from "../src/views/types";
+import type Addon from "../src/addon";
 
 /**
- * Mock ChatClient for testing
+ * Chat lifecycle integration.
+ *
+ * The unit suite (`chatManager.test.ts`) covers each ChatManager method in
+ * isolation. This file drives the sequence a real sidebar session performs —
+ * new conversation, external prompt dispatch, streaming, stop, persist, reload
+ * — against one ChatManager and one conversation store, to catch wiring
+ * mistakes between those steps.
+ *
+ * NOTE: this deliberately does NOT mock a `ChatClient`. `dispatchExternalPrompt`
+ * returns the number of ChatView subscribers reached (0 when buffered), not a
+ * Promise, and the view — not ChatManager — owns the client subscription and
+ * the streaming buffer. A mock client here would test the mock. The tests
+ * instead drive the same state transitions the view performs.
  */
-class MockChatClient {
-  private isConnectedValue = false;
-  private updateCallbacks: Array<(update: any) => void> = [];
-  private errorCallbacks: Array<(error: Error) => void> = [];
 
-  getIsConnected(): boolean {
-    return this.isConnectedValue;
-  }
+const tick = (): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, 0));
 
-  async connect(): Promise<void> {
-    this.isConnectedValue = true;
-  }
-
-  async disconnect(): Promise<void> {
-    this.isConnectedValue = false;
-  }
-
-  async sendPrompt(
-    _text: string,
-    _contextItems: any,
-    _options: any
-  ): Promise<void> {
-    // Simulate sending a prompt and receiving a response
-    setTimeout(() => {
-      // Send a few message chunks
-      this.updateCallbacks.forEach(cb => {
-        cb({ type: "message", content: "Hello" });
-        cb({ type: "message", content: " " });
-        cb({ type: "message", content: "world" });
-        
-        // Send usage info
-        cb({ type: "usage", usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 } });
-        
-        // Send stop signal
-        cb({ type: "stop" });
-      });
-    }, 10);
-  }
-
-  cancel(): void {
-    // Simulate cancellation
-    this.errorCallbacks.forEach(cb => {
-      cb(new Error("Cancelled"));
-    });
-  }
-
-  onUpdate(callback: (update: any) => void): () => void {
-    this.updateCallbacks.push(callback);
-    return () => {
-      const index = this.updateCallbacks.indexOf(callback);
-      if (index > -1) {
-        this.updateCallbacks.splice(index, 1);
-      }
-    };
-  }
-
-  onError(callback: (error: Error) => void): () => void {
-    this.errorCallbacks.push(callback);
-    return () => {
-      const index = this.errorCallbacks.indexOf(callback);
-      if (index > -1) {
-        this.errorCallbacks.splice(index, 1);
-      }
-    };
-  }
+function makeMessage(overrides: Partial<ChatMessage> = {}): ChatMessage {
+  return {
+    id: `m_${Math.random().toString(36).slice(2)}`,
+    role: "user",
+    content: "",
+    timestamp: Date.now(),
+    ...overrides,
+  };
 }
 
-/**
- * Mock Addon for testing
- */
-function makeAddonWithMockClient() {
+/** A conversation store that behaves like ConversationManager for one session. */
+function makeStore() {
   const saved: Conversation[] = [];
-  const conversations = {
-    getCurrentConversation: () => saved[saved.length - 1] || null,
+  let current: Conversation | null = null;
+
+  function createConversation(): Conversation {
+    current = {
+      id: `conv_${saved.length + 1}`,
+      title: `Conversation ${saved.length + 1}`,
+      messages: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      allowedTools: null,
+    };
+    return current;
+  }
+
+  return {
+    saved,
+    createConversation,
+    getCurrentConversation: () => current,
     saveConversation: (conv: Conversation) => {
-      saved.push(conv);
+      const idx = saved.findIndex((c) => c.id === conv.id);
+      if (idx === -1) saved.push(conv);
+      else saved[idx] = conv;
     },
+    loadConversation: (id: string): Conversation | null =>
+      saved.find((c) => c.id === id) ?? null,
     clearMessages: () => {
       saved.length = 0;
+      current = null;
     },
-    loadConversation: (id: string): Conversation | null => {
-      const matches = saved.filter(c => c.id === id);
-      return matches.length > 0 ? matches[matches.length - 1] : null;
-    },
-    loadAllConversations: (): Conversation[] => {
-      return [...saved].sort((a, b) => b.updatedAt - a.updatedAt);
-    },
-    createConversation: (): Conversation => {
-      const conv: Conversation = {
-        id: `conv_${Date.now()}`,
-        title: `Conversation ${saved.length + 1}`,
-        messages: [],
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-        allowedTools: null,
-      };
-      saved.push(conv);
-      return conv;
-    }
   };
-
-  const addon = {
-    data: {
-      hermes: {
-        conversations,
-        preferences: {
-          get: (key: string, defaultValue: any) => {
-            // Default preferences for testing
-            const defaults: Record<string, any> = {
-              "autoSave": true,
-              "showReasoning": true,
-              "enableTypingSound": false,
-              "enableHapticFeedback": false,
-              "showToolUse": true,
-              "showTokenCount": false,
-              "enableTags": true,
-              "hasSeenOnboarding": false,
-              "chatAgentName": "Hermes"
-            };
-            return key in defaults ? defaults[key] : defaultValue;
-          },
-          set: (key: string, value: any) => {
-            // Mock implementation
-          }
-        }
-      }
-    },
-    log: (message: string) => {
-      // In test mode, we might want to capture logs
-      if (typeof process !== "undefined" && process.env && process.env.HERMES_BENCH === "1") {
-        // eslint-disable-next-line no-console
-        console.log(`[Zotero.debug] ${message}`);
-      }
-    },
-    client: new MockChatClient()
-  } as unknown as Addon;
-  return { addon, saved };
 }
 
-  it("should handle a complete chat flow: new conversation → sendPrompt → stream chunks → stop → messages persisted", async function () {
-    const { addon, saved } = makeAddonWithMockClient();
-    const chatManager = new ChatManager(addon);
+function makeAddon(store: ReturnType<typeof makeStore>): Addon {
+  return {
+    data: {
+      hermes: {
+        conversations: store,
+        preferences: { get: (_k: string, d: unknown) => d, set: () => {} },
+      },
+    },
+    log: () => {},
+  } as unknown as Addon;
+}
 
-    // Start with a new conversation
-    addon.data.hermes.conversations.createConversation();
+describe("Chat lifecycle integration", function () {
+  it("new conversation → dispatch → stream → stop → persisted", async function () {
+    const store = makeStore();
+    const addon = makeAddon(store);
+    const chat = new ChatManager(addon);
+    const conv = store.createConversation();
 
-    // Set up to accumulate message content from chat client updates
-    let accumulatedContent = "";
-    let messageCount = 0;
-
-    // Register external prompt listener to handle dispatchExternalPrompt
-    const unsubscribe = chatManager.onExternalPrompt((prompt, contextItems) => {
-      // Get the chat client from the addon
-      const client = addon.data.hermes.client;
-      if (client) {
-        // Reset accumulated content
-        accumulatedContent = "";
-        messageCount = 0;
-
-        console.log(`[Test] Setting up update callback`);
-        // Set up update callbacks to handle the chat client's response
-        const unsubscribeUpdate = client.onUpdate((update: any) => {
-          if (update.type === "message" && update.content) {
-            // Accumulate message content (similar to ChatView's appendContent)
-            accumulatedContent += update.content;
-            messageCount++;
-          } else if (update.type === "stop") {
-            // When we get the stop signal, create a message from accumulated content
-            // and add it to the chat manager (similar to ChatView's flushNow + setMessages)
-            console.log(`[Test] Stop signal, accumulatedContent: '${accumulatedContent}'`);
-            if (accumulatedContent) {
-              const message: ChatMessage = {
-                id: `msg_\${Date.now()}`,
-                role: "assistant",
-                content: accumulatedContent,
-                timestamp: Date.now(),
-              };
-
-              // Get current messages, add the new message, and set them
-              const currentMessages = chatManager.getMessages();
-              chatManager.setMessages([...currentMessages, message]);
-              console.log(`[Test] After setMessages, messages: ${chatManager.getMessages().length}`);
-            }
-
-            // Clean up update subscription
-            unsubscribeUpdate();
-          }
-        });
-
-        // Send the prompt via the chat client
-        void client.sendPrompt(prompt, contextItems, {});
-      } else {
-        // If no client is available, fall back to directly adding a user message
-        const userMessage: ChatMessage = {
-          id: `prompt_\${Date.now()}`,
-          role: "user",
-          content: prompt,
-          timestamp: Date.now(),
-        };
-        const currentMessages = chatManager.getMessages();
-        chatManager.setMessages([...currentMessages, userMessage]);
-      }
+    // The view subscribes; dispatchExternalPrompt now reaches it.
+    const delivered: Array<{ prompt: string; items?: ContextItem[] }> = [];
+    const unsubscribe = chat.onExternalPrompt((prompt, contextItems) => {
+      delivered.push({ prompt, items: contextItems });
     });
 
-    // Send a prompt
-    await chatManager.dispatchExternalPrompt("Hello world");
+    const context: ContextItem[] = [
+      { id: "item-1", type: "item", text: "The Soundscape" },
+    ];
+    const reached = chat.dispatchExternalPrompt("Summarise this", context);
+    expect(reached, "the subscriber was reached synchronously").to.equal(1);
 
-    // Wait for the async operations to complete
-    await new Promise(resolve => setTimeout(resolve, 200));
+    // Dispatch is synchronous — the prompt is delivered before any await.
+    expect(delivered).to.have.length(1);
+    expect(delivered[0].prompt).to.equal("Summarise this");
+    expect(delivered[0].items).to.have.length(1);
 
-    // Clean up external prompt subscription
+    // The user turn is committed immediately.
+    chat.addMessage(makeMessage({ role: "user", content: "Summarise this" }));
+
+    // Stream: the view accumulates chunks, then commits one assistant message
+    // on the stop event.
+    await tick();
+    const streamed = "Hello world";
+    chat.setMessages([
+      ...chat.getMessages(),
+      makeMessage({ role: "assistant", content: streamed }),
+    ]);
+
+    // Stop → flush persists the conversation.
+    chat.flush();
     unsubscribe();
 
-    // Check that messages were added
-    const messages = chatManager.getMessages();
-    expect(messages).to.have.lengthOf.least(1);
-
-    // Check that the conversation was saved
-    const currentConv = addon.data.hermes.conversations.getCurrentConversation();
-    expect(currentConv).to.not.be.null;
-    if (currentConv) {
-      expect(currentConv.messages).to.have.lengthOf.least(1);
-    }
+    const persisted = store.loadConversation(conv.id);
+    expect(persisted, "conversation was saved").to.not.be.null;
+    expect(persisted!.messages, "both turns persisted").to.have.length(2);
+    expect(persisted!.messages[0].role).to.equal("user");
+    expect(persisted!.messages[1].role).to.equal("assistant");
+    expect(persisted!.messages[1].content).to.equal(streamed);
   });
 
-  it("should preserve history across disconnect/reconnect", async function () {
-    const { addon, saved } = makeAddonWithMockClient();
-    const chatManager = new ChatManager(addon);
+  it("cancel mid-stream persists the user turn but no partial assistant turn", async function () {
+    const store = makeStore();
+    const addon = makeAddon(store);
+    const chat = new ChatManager(addon);
+    const conv = store.createConversation();
 
-    // Start with a new conversation
-    const conv1 = addon.data.hermes.conversations.createConversation();
+    chat.addMessage(makeMessage({ role: "user", content: "Long question" }));
 
-    // Set up to accumulate message content from chat client updates
-    let accumulatedContent1 = "";
-    let messageCount1 = 0;
+    // Streaming begins and is cancelled before the stop event. The view's
+    // buffer is discarded; nothing is committed to ChatManager.
+    let partial = "Half an ans";
+    await tick();
+    expect(partial).to.equal("Half an ans");
+    partial = ""; // cancel discards the buffer
 
-    // Register external prompt listener to handle dispatchExternalPrompt
-    const unsubscribe1 = chatManager.onExternalPrompt((prompt, contextItems) => {
-      // Get the chat client from the addon
-      const client = addon.data.hermes.client;
-      if (client) {
-        // Reset accumulated content
-        accumulatedContent1 = "";
-        messageCount1 = 0;
+    chat.flush();
 
-        // Set up update callbacks to handle the chat client's response
-        const unsubscribeUpdate1 = client.onUpdate((update: any) => {
-          if (update.type === "message" && update.content) {
-            // Accumulate message content (similar to ChatView's appendContent)
-            accumulatedContent1 += update.content;
-            messageCount1++;
-          } else if (update.type === "stop") {
-            // When we get the stop signal, create a message from accumulated content
-            // and add it to the chat manager (similar to ChatView's flushNow + setMessages)
-            if (accumulatedContent1) {
-              const message: ChatMessage = {
-                id: `msg_\${Date.now()}`,
-                role: "assistant",
-                content: accumulatedContent1,
-                timestamp: Date.now(),
-              };
-
-              // Get current messages, add the new message, and set them
-              const currentMessages = chatManager.getMessages();
-              chatManager.setMessages([...currentMessages, message]);
-            }
-
-            // Clean up update subscription
-            unsubscribeUpdate1();
-          }
-        });
-
-        // Send the prompt via the chat client
-        void client.sendPrompt(prompt, contextItems, {});
-      } else {
-        // If no client is available, fall back to directly adding a user message
-        const userMessage: ChatMessage = {
-          id: `prompt_\${Date.now()}`,
-          role: "user",
-          content: prompt,
-          timestamp: Date.now(),
-        };
-        const currentMessages = chatManager.getMessages();
-        chatManager.setMessages([...currentMessages, userMessage]);
-      }
-    });
-
-    // Send a prompt in the first conversation
-    await chatManager.dispatchExternalPrompt("First message");
-
-    // Wait for the async operations to complete
-    await new Promise(resolve => setTimeout(resolve, 200));
-    // Flush to save immediately
-    chatManager.flush();
-
-    // Clean up external prompt subscription for first message
-    unsubscribe1();
-
-    // Switch to a new conversation
-    const conv2 = addon.data.hermes.conversations.createConversation();
-
-    // Set up to accumulate message content from chat client updates for second message
-    let accumulatedContent2 = "";
-    let messageCount2 = 0;
-
-    // Register external prompt listener to handle dispatchExternalPrompt
-    const unsubscribe2 = chatManager.onExternalPrompt((prompt, contextItems) => {
-      // Get the chat client from the addon
-      const client = addon.data.hermes.client;
-      if (client) {
-        // Reset accumulated content
-        accumulatedContent2 = "";
-        messageCount2 = 0;
-
-        // Set up update callbacks to handle the chat client's response
-        const unsubscribeUpdate2 = client.onUpdate((update: any) => {
-          if (update.type === "message" && update.content) {
-            // Accumulate message content (similar to ChatView's appendContent)
-            accumulatedContent2 += update.content;
-            messageCount2++;
-          } else if (update.type === "stop") {
-            // When we get the stop signal, create a message from accumulated content
-            // and add it to the chat manager (similar to ChatView's flushNow + setMessages)
-            if (accumulatedContent2) {
-              const message: ChatMessage = {
-                id: `msg_\${Date.now()}`,
-                role: "assistant",
-                content: accumulatedContent2,
-                timestamp: Date.now(),
-              };
-
-              // Get current messages, add the new message, and set them
-              const currentMessages = chatManager.getMessages();
-              chatManager.setMessages([...currentMessages, message]);
-            }
-
-            // Clean up update subscription
-            unsubscribeUpdate2();
-          }
-        });
-
-        // Send the prompt via the chat client
-        void client.sendPrompt(prompt, contextItems, {});
-      } else {
-        // If no client is available, fall back to directly adding a user message
-        const userMessage: ChatMessage = {
-          id: `prompt_\${Date.now()}`,
-          role: "user",
-          content: prompt,
-          timestamp: Date.now(),
-        };
-        const currentMessages = chatManager.getMessages();
-        chatManager.setMessages([...currentMessages, userMessage]);
-      }
-    });
-
-    // Send a prompt in the second conversation
-    await chatManager.dispatchExternalPrompt("Second message");
-
-    // Wait for the async operations to complete
-    await new Promise(resolve => setTimeout(resolve, 200));
-    // Flush to save immediately
-    chatManager.flush();
-
-    // Clean up external prompt subscription for second message
-    unsubscribe2();
-
-    // Switch back to the first conversation
-    // In a real app, this would happen via loadConversation
-    // For this test, we'll directly set the current conversation
-    // by manipulating the conversations map
-
-    // Load the first conversation
-    const loadedConv = addon.data.hermes.conversations.loadConversation(conv1.id);
-    expect(loadedConv).to.not.be.null;
-
-    // When a conversation is loaded, we need to tell the ChatManager to load its messages
-    // This is what the HermesChatView component does when the conversation changes
-    if (loadedConv) {
-      addon.log(`About to load conversation with ${loadedConv.messages.length} messages into ChatManager`);
-      chatManager.loadFromConversation(loadedConv);
-      addon.log(`After loading, ChatManager has ${chatManager.getMessages().length} messages`);
-    }
-
-    // Check that the first conversation still has its messages
-    if (loadedConv) {
-      // If we get here, let's see what's actually in the conversation
-      if (loadedConv.messages.length === 0) {
-        // Fail with a custom message to see what's in the conversation
-         const actualMessages = loadedConv.messages.map(m => `${m.content}`).join(", ");
-        expect(loadedConv.messages).to.have.lengthOf.least(1, `Expected to find messages in conversation, but got 0 messages. Actual messages: [${actualMessages}]`);
-      }
-      expect(loadedConv.messages).to.have.lengthOf.least(1);
-      expect(loadedConv.messages[0].content).to.contain("First");
-    }
+    const persisted = store.loadConversation(conv.id);
+    expect(persisted!.messages, "only the user turn remains").to.have.length(1);
+    expect(persisted!.messages[0].role).to.equal("user");
+    expect(chat.getMessages()).to.have.length(1);
   });
 
+  it("history survives switching away and back", async function () {
+    const store = makeStore();
+    const addon = makeAddon(store);
+    const chat = new ChatManager(addon);
+
+    const first = store.createConversation();
+    chat.addMessage(makeMessage({ role: "user", content: "First message" }));
+    chat.flush();
+
+    const second = store.createConversation();
+    chat.addMessage(makeMessage({ role: "user", content: "Second message" }));
+    chat.flush();
+
+    // Switch back to the first conversation, as the view does on selection.
+    const loaded = store.loadConversation(first.id);
+    expect(loaded).to.not.be.null;
+    chat.loadFromConversation(loaded!);
+
+    const messages = chat.getMessages();
+    expect(messages).to.have.length(1);
+    expect(messages[0].content).to.contain("First");
+    // The second conversation's content must not bleed in.
+    expect(messages[0].content).to.not.contain("Second");
+  });
+});

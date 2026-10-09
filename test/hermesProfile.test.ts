@@ -178,9 +178,7 @@ describe("HermesProfile", function () {
     });
 
     it("returns the name when the profile exists", function () {
-      expect(resolveHermesProfile("logios", base)).to.equal(
-        "logios",
-      );
+      expect(resolveHermesProfile("logios", base)).to.equal("logios");
     });
 
     it("returns null for a configured name that does not exist", function () {
@@ -196,9 +194,7 @@ describe("HermesProfile", function () {
     });
 
     it("trims surrounding whitespace from a pasted name", function () {
-      expect(resolveHermesProfile("  logios  ", base)).to.equal(
-        "logios",
-      );
+      expect(resolveHermesProfile("  logios  ", base)).to.equal("logios");
     });
   });
 

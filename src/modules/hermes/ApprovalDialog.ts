@@ -45,12 +45,19 @@ export class ApprovalDialog {
    * Resolves when the user approves or denies the queued change.
    */
   private enqueueDialog(change: PendingFileChange): Promise<boolean> {
-    return new Promise<boolean>((resolve) => {
+    return new Promise<boolean>((resolve, reject) => {
       const run = () => {
         this.isShowingDialog = true;
         this.showDialog(change)
           .then((result) => {
             resolve(result);
+          })
+          .catch((error) => {
+            // A dialog that fails to render must fail the approval, not hang it
+            // forever. Without this the outer promise never settles, so
+            // `runWrite` awaits indefinitely and the mutation is neither applied
+            // nor audited.
+            reject(error);
           })
           .finally(() => {
             this.isShowingDialog = false;
