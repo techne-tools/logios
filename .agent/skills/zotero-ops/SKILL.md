@@ -199,20 +199,17 @@ it before retrying.
 >
 > **The mirror image is also real: local RED while CI is green.** A working copy
 > accumulates untracked scratch — `.opencode/`, `.superpowers/`, and
-> `.worktrees/` (which holds whole checkouts). `prettier --check .` walks all of
-> them, so `npm run lint:check` can report ~25 unformatted files that a clean
-> checkout, and therefore CI, has never seen. Do not reformat them and do not
-> treat the red as blocking; gate the scope CI actually checks:
->
-> ```bash
-> printf '%s\n.opencode\n.superpowers\n.worktrees\n' "$(cat .prettierignore)" > /tmp/pi
-> npx prettier --check . --ignore-path /tmp/pi   # exit 0 == CI's verdict
-> npx eslint .                                    # eslint is unaffected
-> ```
+> `.worktrees/` (which holds whole checkouts). `prettier --check .` walked all of
+> them and reported ~24 unformatted files a clean checkout, and therefore CI, has
+> never seen. All three are now listed in `.prettierignore`, so
+> `npm run lint:check` is directly green here and is CI's real verdict: trust it,
+> and if it goes red again on paths under a scratch tree, add that tree to
+> `.prettierignore` rather than reformatting someone's scratch.
 >
 > `git ls-files -z | xargs -0 npx prettier --check` is **not** a substitute:
 > given explicit paths, prettier errors on tracked `.ftl` files it has no parser
-> for, so it fails for the wrong reason.
+> for, so it fails for the wrong reason. A directory scan skips unknown
+> extensions silently; explicit paths do not.
 
 - [ ] Version bumped in package.json
       (`npm version <patch|minor|major> --no-git-tag-version` — pick the
