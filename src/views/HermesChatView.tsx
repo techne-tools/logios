@@ -19,6 +19,7 @@ import {
   getSlashCommands,
 } from "../modules/hermes/SlashCommands";
 import type { SlashCommand } from "../modules/hermes/SlashCommands";
+import { synthesisCancel } from "../modules/hermes/SynthesisManager";
 
 interface HermesChatViewProps {
   addon: Addon;
@@ -544,6 +545,9 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
       const st = stateRef.current;
       if (st.isTyping) {
         addon.log("[ChatView] Stop requested — cancelling in-flight stream");
+        // Also trip the synthesis cancel flag so a multi-batch /synthesize ends
+        // between batches, not just the current turn.
+        synthesisCancel.request();
         void hermes.client.cancel();
         // Clear the typing state immediately — the ACP cancel is
         // asynchronous and no terminal event is guaranteed to follow.
@@ -1072,6 +1076,7 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
   }, [hermes.conversations]);
 
   const abortActiveStream = useCallback(() => {
+    synthesisCancel.request();
     if (stateRef.current.isTyping) {
       hermes.client.cancel().catch(() => {});
       setIsTyping(false);
