@@ -337,7 +337,7 @@ built; see the review doc.
 > 1. **Pill renderer lives in `MarkdownRenderer.tsx`, not `ChatMessageItem.tsx`.**
 >    All `action:`/`add-context:`/`apply-tag:` pills are rendered as safe-URL
 >    inline links by `src/utils/MarkdownRenderer.tsx` (the sandbox-safe path —
->    `ChatMessageItem.tsx` holds the message *toolbar* buttons, not markdown
+>    `ChatMessageItem.tsx` holds the message _toolbar_ buttons, not markdown
 >    pills). `insert-citation:` was added to `isSafeUrl` + the action-pill class
 >    list there, and the click interception joined the existing handler in
 >    `HermesChatView.tsx`.
