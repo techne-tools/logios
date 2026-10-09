@@ -233,8 +233,12 @@ mention this phrase?" against the real index.
 
 **Intent**: close research→writing without copy-paste from `/cite`.
 
-- V1 bounds: citation insertion into Zotero notes at **top or bottom** only
-  (in-sandbox cursor positioning is the spike question deferred to ghost-text).
+- V1 bounds: citation insertion into Zotero notes at **top or bottom** only.
+  Cursor-position insertion is **out of scope, not deferred**: reading the note
+  editor's caret is infeasible in the plugin sandbox (see the §9 spike result).
+- Target: the note open in the editor, resolved from the selected tab via
+  `Zotero.Notes.getByTabID`. With no note open the click is refused rather than
+  guessing a target (the earlier create-a-note fallback produced duplicates).
 - Flow: assistant proposes citations via existing `action:` pills → new pill
   `insert-citation:` → `runWrite` gate targeting `NoteManager.writeNote`
   (diff = exact insertion, position named) → audited.
@@ -244,15 +248,26 @@ mention this phrase?" against the real index.
 **Success**: user flows a `/cite` answer into a note in ≤3 clicks, all gated
 and logged.
 
-## 9. Ghost-text note completion (Tier 1 backlog)
+## 9. Ghost-text note completion — **DROPPED (spike resolved 2026-10-09)**
 
-**Intent**: inline suggestions in the note editor.
+**Intent was**: inline suggestions in the note editor.
 
-- **Spike only this phase**: determine what hooks exist in Zotero 10's note
-  editor (event interception, overlay feasibility) and whether suggestions can
-  render without the sandbox-crashing patterns. Output = feasibility report +
-  recommendation; **no implementation either way**. If infeasible → drop from
-  roadmap with the finding recorded in TODO.md.
+**SPIKE RESULT (2026-10-09): INFEASIBLE as a supported feature.** Full report:
+`docs/superpowers/spikes/ghost-text-spike.md`.
+
+The note editor is a XUL custom element hosting a **content-privileged iframe**
+(`resource://zotero/note-editor/editor.html`) running a **React + ProseMirror**
+app, talked to only via an internal `postMessage` protocol
+(`editorInstance.js:424`). Ghost text needs four surfaces and none exists: read
+the caret/selection, render an overlay in the editor, subscribe to keystrokes or
+content changes, and insert at an arbitrary cursor. `insertHTML` exists but is
+parent→iframe and "end of document" only. `Zotero.Notes.registerEditorInstance`
+is Zotero's own plumbing, not a plugin hook.
+
+**Dropped from the roadmap.** The end-position capability it was meant to provide
+is already delivered deliberately by Task 9's `/cite` insert pills, and a future
+`/complete`-style action can append a suggestion through the same gated write.
+Reopen only if a _public_ caret/selection + insertion API appears.
 
 ## 10. Release tooling
 
@@ -289,4 +304,8 @@ that build; a clean `release/` channel read confirms stable path.
 2. ~~Reader panel: inject into reader chrome vs Zotero primary-pane tab?~~
    **RESOLVED 2026-10-09** — neither; the reader chrome has no panel hook (see
    §6 spike result). Keep toolbar/context-menu actions → library sidebar.
-3. Ghost text: feasible in sandbox at all? (Spike resolves.)
+3. ~~Ghost text: feasible in sandbox at all?~~ **RESOLVED 2026-10-09** —
+   **infeasible as a supported feature.** The note editor is a content-privileged
+   iframe running React + ProseMirror with no public caret/selection, overlay,
+   change-event, or cursor-insertion surface. Dropped from the roadmap. See §9
+   and `docs/superpowers/spikes/ghost-text-spike.md`.

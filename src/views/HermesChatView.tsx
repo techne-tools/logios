@@ -65,6 +65,11 @@ function isDarkColor(color: string): boolean {
   return false;
 }
 
+/**
+ * Render the chat sidebar, synchronizing messages with the chat manager and
+ * handling streamed responses, conversation controls, and library actions.
+ * Shows an initialization placeholder while the Hermes modules are unavailable.
+ */
 export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
   // No render log here — this component re-renders on every stream chunk;
   // logging on each render floods the console (min1: render log noise).
@@ -829,6 +834,13 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
     const container = messagesContainerRef.current;
     if (!container) return;
 
+    /**
+     * Open web links externally and dispatch plugin action links from messages.
+     * Citation links target the note open in Zotero's note editor; with no note
+     * open the click is refused with an error rather than guessing a target.
+     * Insertion outcomes are shown in chat, and insertion errors in the error
+     * banner. Errors reading the open note before insertion propagate.
+     */
     const handler = async (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       const link = target.closest("a");
@@ -844,6 +856,7 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
         !href.startsWith("https://") &&
         !href.startsWith("add-context:") &&
         !href.startsWith("apply-tag:") &&
+        !href.startsWith("insert-citation:") &&
         !href.startsWith("action:")
       ) {
         e.preventDefault();
@@ -943,6 +956,66 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
           ]);
         } catch (err) {
           setError(`Failed to apply tag: ${(err as Error).message}`);
+        }
+      } else if (href && href.startsWith("insert-citation:")) {
+        e.preventDefault();
+        // Payload form: `insert-citation:<position>:<encoded citation>`.
+        // The citation is URL-encoded by the `/cite` emitter because CSL text
+        // contains ")", ",", "&" and would otherwise break the link target.
+        const rest = href.substring("insert-citation:".length);
+        const sep = rest.indexOf(":");
+        if (sep < 0) {
+          setError("Malformed citation link.");
+          return;
+        }
+        const position = rest.substring(0, sep);
+        if (position !== "top" && position !== "bottom") {
+          setError(`Unknown insertion position: ${position}`);
+          return;
+        }
+        let citationText: string;
+        try {
+          citationText = decodeURIComponent(rest.substring(sep + 1));
+        } catch {
+          setError("Could not read the citation from the link.");
+          return;
+        }
+
+        // Target: the note open in Zotero's note editor. We never guess —
+        // without an open note there is no sensible target, and the previous
+        // "create a note under the attached item" fallback spawned a duplicate
+        // note on every click. Tell the user instead.
+        const editing = await hermes.notes.readEditingNote();
+        if (!editing) {
+          setError(
+            "No note is open. Open the note you want the citation in, then click the pill again.",
+          );
+          return;
+        }
+
+        try {
+          const result = await hermes.notes.insertCitationIntoNote({
+            citation: citationText,
+            position,
+            noteID: editing.noteID,
+          });
+          const message =
+            result.status === "success"
+              ? `Citation inserted at the ${position} of the note.`
+              : result.status === "rejected"
+                ? "Citation insertion rejected."
+                : `Citation insertion failed: ${result.error ?? "unknown error"}`;
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: generateMessageId(),
+              content: message,
+              role: "system",
+              timestamp: Date.now(),
+            },
+          ]);
+        } catch (err) {
+          setError(`Citation insertion failed: ${(err as Error).message}`);
         }
       } else if (href && href.startsWith("action:")) {
         e.preventDefault();

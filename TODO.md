@@ -626,6 +626,26 @@ All features must follow Logios coding conventions.
    `ItemManager.searchFullText` + `/find [phrase]` close the plan's original D0
    tier with no sidecar and no network. Scanned PDFs with no text layer remain
    invisible to it — that limit is surfaced honestly in the empty-result message.
+6. **Ghost text / inline completion: not feasible (2026-10-09).** Zotero's note
+   editor is a XUL custom element hosting a **content-privileged iframe**
+   (`resource://zotero/note-editor/editor.html`) running a React + ProseMirror
+   app, reached only through a private `postMessage` protocol
+   (`editorInstance.js:424`). There is no public surface to read the caret or
+   selection, render an editor overlay, subscribe to keystrokes/content changes,
+   or insert at an arbitrary cursor. `Zotero.Notes.registerEditorInstance` is
+   Zotero's own plumbing, not a plugin hook. Ghost text is dropped from the
+   roadmap. See `docs/superpowers/spikes/ghost-text-spike.md`; spec §9 and open
+   question 3, both resolved.
+7. **Citations insert into the OPEN note at top/bottom only (2026-10-09).**
+   `/cite` emits "Insert at top / bottom of open note" pills; the click routes
+   through `NoteManager.insertCitationIntoNote` → the `runWrite` approval gate →
+   a `setNote`+`saveTx` apply, audited either way. The target is the note open in
+   Zotero's note editor, resolved from the selected tab via
+   `Zotero.Notes.getByTabID` (`Zotero_Tabs.selectedID` is a _property_, not a
+   method). With no note open the click is **refused** — there is no
+   create-a-note fallback, because that spawned a duplicate note on every click.
+   Cursor-position insertion is not offered: reading the note editor's caret is
+   the same infeasibility as ghost text (constraint 6).
 
 ---
 

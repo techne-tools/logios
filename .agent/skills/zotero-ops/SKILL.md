@@ -288,6 +288,97 @@ grep -rn '0\.<prev>\.0' --include='*.md' . \
 Historical CHANGELOG entries and `docs/PLAN-*.md` **should** keep their old
 versions — they are dated records, not current state. Do not "fix" them.
 
+## Release Channel Verification
+
+**Why**: the plugin's `update_url` is baked at build time and points at the
+**rolling `release` tag**, not the version tag. Zotero polls it to auto-update.
+A wrong channel filename means updates silently never arrive; nothing in CI
+checks it.
+
+### How the channel is selected
+
+`zotero-plugin.config.ts` chooses the filename from the version string:
+
+```ts
+updateURL: `https://github.com/{{owner}}/{{repo}}/releases/download/release/${
+  pkg.version.includes("-") ? "update-beta.json" : "update.json"
+}`,
+```
+
+- `0.6.0` → `update.json` (stable)
+- `0.7.0-beta.1`, `1.0.0-rc.2` → `update-beta.json` (pre-release)
+
+**Which manifests a release publishes.** Verified against the scaffold
+(`zotero-plugin-scaffold/dist/shared/scaffold-src-*.mjs`): `update-beta.json` is
+written unconditionally, `update.json` **only** when the version is not a
+pre-release; the uploader then deletes and re-uploads exactly the manifests it
+generated, so anything it did not generate is left in place.
+
+- **Stable release** — generates and uploads **both** `update.json` and
+  `update-beta.json`.
+- **Pre-release** — generates and uploads **only** `update-beta.json`. An
+  existing `update.json` on the `release` tag is **preserved**, not rewritten.
+- **First-ever pre-release** (no stable release yet) — the `release` tag carries
+  `update-beta.json` only, and there is **no** `update.json` at all until the
+  first stable release. Installed stable users therefore do not see the
+  pre-release.
+
+Only the _filename_ selects the channel; for the same version the two files hold
+identical content.
+
+### Dry-run (no publish) — proves the channel logic locally
+
+```bash
+NODE_ENV=production npm run build
+
+# channel filename the config would bake for this version
+node -e 'const v=require("./package.json").version;
+  console.log(v, "->", v.includes("-") ? "update-beta.json" : "update.json")'
+
+# what the built XPI actually advertises
+unzip -p .scaffold/build/logios.xpi manifest.json \
+  | python3 -c 'import sys,json; print(json.load(sys.stdin)["applications"]["zotero"]["update_url"])'
+
+# the generated manifests and the hash they advertise
+ls .scaffold/build/          # logios.xpi  update.json  update-beta.json
+cat .scaffold/build/update.json
+```
+
+Expect: the filename in `update_url` matches the version's channel, and the
+hex digest in the generated manifest's `update_hash` — after stripping its
+`sha512:` prefix — equals the hex digest printed by
+
+```bash
+shasum -a 512 .scaffold/build/logios.xpi | awk '{print $1}'
+```
+
+Compare the **digest only**: `shasum` also prints the filename, and the manifest
+value carries the `sha512:` prefix, so neither side is compared verbatim.
+
+### Channel-verification checklist (after the workflow goes green)
+
+- [ ] Rolling `release` tag carries the manifests the channel implies:
+      `gh release view release --repo techne-tools/logios --json assets --jq '[.assets[].name]'`
+      (stable → `update.json` + `update-beta.json`; pre-release → `update-beta.json`,
+      with `update.json` present only once a stable release exists)
+- [ ] `update.json` is served (200) from the tag the `update_url` names:
+
+      ```bash
+      curl -sSL -o /dev/null -w '%{http_code}\n' \
+        https://github.com/techne-tools/logios/releases/download/release/update.json
+      ```
+
+- [ ] The advertised `version` in the live manifest equals `package.json`
+- [ ] `update_hash` matches the published XPI (see Post-Release Verification §1)
+- [ ] For a pre-release: `update-beta.json` carries the new version, and
+      `update.json` — if present — still carries the last stable version
+
+**Verified 2026-10-09 for v0.6.0** — stable channel; `release` tag carries
+`update-beta.json` + `update.json`; live `update.json` returns HTTP 200 and
+advertises `0.6.0`. The published 0.6.0 tag and `release`-tag manifests differ in
+`update_hash` (the workflow rebuilds), so always re-run the hash check after a
+release rather than trusting the local build's hash.
+
 ## Testing Strategy
 
 ### Unit Tests

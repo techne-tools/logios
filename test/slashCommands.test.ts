@@ -39,6 +39,29 @@ function makeAddon(overrides: Record<string, any> = {}) {
           },
           searchAnnotations: async () => overrides.annotations ?? [],
         },
+        citations: {
+          getCurrentStyle: () => overrides.styleID ?? "style-apa",
+          getCurrentStyleName: () => overrides.styleTitle ?? "APA 7th",
+          getStyleByIDOrName: () => overrides.styleID ?? "style-apa",
+          // `in` rather than `??` so a test can pass an explicit null/"" to
+          // exercise the null-citation and empty-bibliography branches.
+          generateCitationWithStyle: () =>
+            "citation" in overrides ? overrides.citation : "(Lee, 2024)",
+          generateBibliographyWithStyle: () =>
+            "bibliography" in overrides
+              ? overrides.bibliography
+              : "Lee, S. (2024). A paper.",
+          getCitationSnippets: () => ({
+            citekey: "lee2024",
+            pandoc: "[@lee2024]",
+            latex: "\\cite{lee2024}",
+            typst: "@lee2024",
+          }),
+        },
+        preferences: {
+          get: (_key: string, fallback: any) =>
+            overrides.prefs?.[_key] ?? fallback,
+        },
       },
     },
   };
@@ -313,6 +336,93 @@ describe("SlashCommands", function () {
       expect(out).to.include("The Soundscape");
       expect(out).to.include("Schafer");
       expect(out).to.include("add-context:7");
+    });
+  });
+
+  describe("/cite", function () {
+    after(function () {
+      if ((globalThis as any).__realZotero) {
+        (globalThis as any).Zotero = (globalThis as any).__realZotero;
+        delete (globalThis as any).__realZotero;
+      }
+    });
+
+    function stubItems(item: any) {
+      const realZotero = (globalThis as any).Zotero;
+      if (!(globalThis as any).__realZotero) {
+        (globalThis as any).__realZotero = realZotero;
+      }
+      (globalThis as any).Zotero = {
+        ...realZotero,
+        Items: { getAsync: async () => item },
+      };
+    }
+
+    it("emits top and bottom insert-citation pills carrying the CSL text", async function () {
+      const { addon } = makeAddon({
+        attached: [{ id: 7, title: "The Soundscape" }],
+        citation: "(Schafer, 1977)",
+      });
+      stubItems({ id: 7 });
+
+      const out = (await command("cite").execute(addon, "")) as string;
+      // Parentheses are percent-encoded in addition to encodeURIComponent's own
+      // escapes — parseInline tolerates only ONE level of nested parens, so a
+      // citation like "(Smith, 2020, p. 5 (n. 3))" would otherwise break the link.
+      const expectedPayload = encodeURIComponent("(Schafer, 1977)")
+        .replace(/\(/g, "%28")
+        .replace(/\)/g, "%29");
+      expect(out).to.include(`insert-citation:top:${expectedPayload}`);
+      expect(out).to.include(`insert-citation:bottom:${expectedPayload}`);
+      expect(out).to.include("Insert at top of open note");
+      // The CSL text itself still renders in the answer.
+      expect(out).to.include("(Schafer, 1977)");
+    });
+
+    it("encodes parentheses so a doubly-nested citation still yields a parseable link", async function () {
+      const { addon } = makeAddon({
+        attached: [{ id: 7, title: "X" }],
+        citation: "(Smith, 2020, p. 5 (n. 3))",
+      });
+      stubItems({ id: 7 });
+
+      const out = (await command("cite").execute(addon, "")) as string;
+      // The href must contain no raw "(" or ")" from the payload.
+      const m = out.match(/\[Insert at top of open note\]\(([^)]*)\)/);
+      expect(m).to.not.be.null;
+      const href = m![1];
+      expect(href).to.not.match(/[()]/);
+      expect(
+        decodeURIComponent(href.replace("insert-citation:top:", "")),
+      ).to.equal("(Smith, 2020, p. 5 (n. 3))");
+    });
+
+    it("falls back to decoded bibliography text, never the literal 'None'", async function () {
+      const { addon } = makeAddon({
+        attached: [{ id: 7, title: "X" }],
+        citation: null,
+        bibliography: "Smith &amp; Jones. (2020). <i>A title</i>.",
+      });
+      stubItems({ id: 7 });
+
+      const out = (await command("cite").execute(addon, "")) as string;
+      // Tags stripped, entities decoded: "&amp;" must not survive into the payload.
+      expect(out).to.include("Smith & Jones. (2020). A title.");
+      expect(out).to.not.include("insert-citation:top:None");
+      expect(out).to.not.include("&amp;amp;");
+    });
+
+    it("emits no pills when there is neither a citation nor a bibliography", async function () {
+      const { addon } = makeAddon({
+        attached: [{ id: 7, title: "X" }],
+        citation: null,
+        bibliography: "",
+      });
+      stubItems({ id: 7 });
+
+      const out = (await command("cite").execute(addon, "")) as string;
+      expect(out).to.not.include("insert-citation:");
+      expect(out).to.include("No citation text to insert");
     });
   });
 });

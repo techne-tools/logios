@@ -45,6 +45,7 @@ export function isSafeUrl(url?: string): boolean {
     trimmed.startsWith("http://") ||
     trimmed.startsWith("add-context:") ||
     trimmed.startsWith("apply-tag:") ||
+    trimmed.startsWith("insert-citation:") ||
     trimmed.startsWith("action:")
   );
 }
@@ -148,6 +149,11 @@ export function parseInline(text: string): InlineSegment[] {
   return segments;
 }
 
+/**
+ * Render inline segments as React nodes, leaving disallowed links as text.
+ * Recognized plugin action links become pills; other permitted links target
+ * a new window. Bold, italic, and code contents are parsed for nested markup.
+ */
 function renderInline(segments: InlineSegment[]): ReactNode[] {
   return segments.map((seg, i) => {
     switch (seg.type) {
@@ -181,6 +187,7 @@ function renderInline(segments: InlineSegment[]): ReactNode[] {
         const isAction =
           seg.url.startsWith("apply-tag:") ||
           seg.url.startsWith("add-context:") ||
+          seg.url.startsWith("insert-citation:") ||
           seg.url.startsWith("action:");
         return (
           <a

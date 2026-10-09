@@ -1,5 +1,6 @@
 import type Addon from "../../addon";
 import type { AnnotationQuery } from "./AnnotationManager";
+import { decodeHtmlEntities } from "./citationInsert";
 import { isDoiLike, normaliseDoi } from "./LookupManager";
 import {
   formatBatchReport,
@@ -420,6 +421,15 @@ Requirements:
   {
     description:
       "Generate in-text citation and bibliography for the attached item",
+    /**
+     * Return citation Markdown and insertion links for the first attached item.
+     * `args` optionally selects a style by ID or name; blank uses the current
+     * style. Links carry the in-text citation, falling back to the bibliography
+     * with its tags stripped and entities decoded; an empty result yields no
+     * links rather than a placeholder. Disabled citations, missing items, and
+     * unknown styles produce messages. Errors escaping item lookup or generation
+     * become failure messages; errors selecting the style propagate.
+     */
     execute: async (addon, args) => {
       // M4: respect the enableCitations pref
       if (!addon.data.hermes!.preferences.get("enableCitations", true)) {
@@ -460,11 +470,41 @@ Requirements:
             [item],
             styleID,
           );
-        const cleanBib = bibliography
-          ? bibliography.replace(/<[^>]*>/g, "").trim()
-          : "None";
 
         const snippets = addon.data.hermes!.citations.getCitationSnippets(item);
+
+        // Bibliography as plain text: strip tags, then DECODE entities.
+        // `generateBibliographyWithStyle` returns HTML, so "Smith & Jones"
+        // arrives as "Smith &amp; Jones"; left decoded-later it would insert a
+        // literal "&amp;" into the note (and double-escape to "&amp;amp;").
+        const bibText = bibliography
+          ? decodeHtmlEntities(bibliography.replace(/<[^>]*>/g, "")).trim()
+          : "";
+
+        // "Insert into note" pills. The citation travels in the href; the click
+        // handler decodes it and calls `notes.insertCitationIntoNote`, so the
+        // gated write is reachable in <=3 clicks. Prefer the in-text citation,
+        // fall back to the bibliography text — never to a placeholder like
+        // "None", which would otherwise be inserted verbatim.
+        const cslCitation = citation || bibText;
+
+        // `encodeURIComponent` leaves "(" and ")" unescaped, but `parseInline`
+        // only tolerates ONE level of nested parens in a link target — a
+        // citation such as "(Smith, 2020, p. 5 (n. 3))" would break the link and
+        // the pill would silently do nothing. Percent-encode them explicitly;
+        // `decodeURIComponent` restores them on click.
+        const encodedCitation = cslCitation
+          ? encodeURIComponent(cslCitation)
+              .replace(/\(/g, "%28")
+              .replace(/\)/g, "%29")
+          : "";
+
+        const insertPills = cslCitation
+          ? [
+              `[Insert at top of open note](insert-citation:top:${encodedCitation})`,
+              `[Insert at bottom of open note](insert-citation:bottom:${encodedCitation})`,
+            ].join(" ")
+          : "_No citation text to insert. Open a note, then run `/cite` again._";
 
         return `### Citation (${styleTitle}) for **${parentItem.title}**
 
@@ -472,7 +512,10 @@ Requirements:
 ${citation || "None"}
 
 **CSL Bibliography:**
-${cleanBib}
+${bibText || "None"}
+
+**Insert into note:**
+${insertPills}
 
 ---
 
