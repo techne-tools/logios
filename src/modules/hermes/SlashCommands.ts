@@ -420,6 +420,15 @@ Requirements:
   {
     description:
       "Generate in-text citation and bibliography for the attached item",
+    /**
+     * Return citation Markdown and insertion links for the first attached item.
+     * `args` optionally selects a style by ID or name; blank uses the current
+     * style. Links carry the in-text citation, falling back to the stripped
+     * bibliography (or "None" if no bibliography is returned).
+     * Disabled citations, missing items, and unknown styles produce messages.
+     * Errors escaping item lookup or generation become failure messages;
+     * errors selecting the style propagate.
+     */
     execute: async (addon, args) => {
       // M4: respect the enableCitations pref
       if (!addon.data.hermes!.preferences.get("enableCitations", true)) {

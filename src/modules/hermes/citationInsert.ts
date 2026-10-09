@@ -45,12 +45,14 @@ export function escapeCitationText(text: string): string {
 
 /**
  * Build the resulting note body for a citation at `position`.
+ * Trims and HTML-escapes the plain-text citation into a paragraph. Returns
+ * that paragraph as `insertion`, the full HTML as `newContent`, and `position`.
  *
  * Rules:
  *   - An empty/blank existing body yields just the citation paragraph — no
  *     stray leading blank line.
  *   - A non-empty body keeps its content verbatim; the citation paragraph is
- *     separated by exactly one newline, at the chosen end.
+ *     joined with one added newline at the chosen end.
  *   - An empty (or whitespace-only) citation is a caller error: it throws,
  *     because silently writing an empty paragraph into the user's note is worse
  *     than refusing. The caller turns that into a visible message.

@@ -149,6 +149,11 @@ export function parseInline(text: string): InlineSegment[] {
   return segments;
 }
 
+/**
+ * Render inline segments as React nodes, leaving disallowed links as text.
+ * Recognized plugin action links become pills; other permitted links target
+ * a new window. Bold, italic, and code contents are parsed for nested markup.
+ */
 function renderInline(segments: InlineSegment[]): ReactNode[] {
   return segments.map((seg, i) => {
     switch (seg.type) {

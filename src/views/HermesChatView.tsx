@@ -65,6 +65,11 @@ function isDarkColor(color: string): boolean {
   return false;
 }
 
+/**
+ * Render the chat sidebar, synchronizing messages with the chat manager and
+ * handling streamed responses, conversation controls, and library actions.
+ * Shows an initialization placeholder while the Hermes modules are unavailable.
+ */
 export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
   // No render log here — this component re-renders on every stream chunk;
   // logging on each render floods the console (min1: render log noise).
@@ -829,6 +834,13 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
     const container = messagesContainerRef.current;
     if (!container) return;
 
+    /**
+     * Open web links externally and dispatch plugin action links from messages.
+     * Citation links target the selected Reader note or a new note under the
+     * first attached item; malformed links and missing targets show an error.
+     * Insertion outcomes are shown in chat, and insertion errors in the error
+     * banner. Errors reading the selected note before insertion propagate.
+     */
     const handler = async (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       const link = target.closest("a");

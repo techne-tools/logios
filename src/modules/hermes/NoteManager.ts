@@ -37,7 +37,8 @@ export class NoteManager {
   }
 
   /**
-   * Insert a citation into a note under the approval gate.
+   * Insert a trimmed, HTML-escaped citation paragraph at the top or bottom
+   * of a note, using the configured approval dialog and audit sink.
    *
    * WHY A SECOND NOTE WRITE PATH
    * ----------------------------
@@ -51,8 +52,18 @@ export class NoteManager {
    *   - `noteID` given → that note must exist and be a note, else throw. A
    *     missing *named* target is a caller bug, not a user decision (same rule as
    *     `ItemManager.updateItemMetadataGated`).
-   *   - `noteID` null → `parentItemID` must be supplied; a fresh child note is
-   *     created under it. With neither, there is nothing to write to.
+   *   - `noteID` null or omitted → `parentItemID` must be supplied; a fresh
+   *     child note is created under it. `noteID` takes precedence when both exist.
+   *   - With neither ID, returns `failed` without prompting or writing.
+   *
+   * `styleName` labels the approval preview; it does not format the citation.
+   * Returns `success` with the saved note ID, `rejected` without a mutation,
+   * or `failed` with an error for approval or write failures. If no approval
+   * dialog is configured, the write proceeds without prompting.
+   *
+   * @throws If a supplied target is missing, `noteID` identifies a non-note,
+   * or the citation is blank. Errors reading the target before approval also
+   * propagate, as do errors escaping the gate's audit or error-reporting calls.
    */
   public async insertCitationIntoNote(opts: {
     citation: string;
@@ -125,11 +136,12 @@ export class NoteManager {
   }
 
   /**
-   * Create a child note under `parentItemID` with NO approval prompt.
+   * Save `content` as note HTML without escaping it and return the new note ID.
+   * Uses the parent's library when it resolves; otherwise creates a standalone
+   * note in the user library. Lookup and save errors propagate to the caller.
    *
    * Only for use inside an already-approved `runWrite.apply()` — the caller has
-   * taken the user's decision, so re-prompting would be a double gate. Kept
-   * private and narrowly scoped so it cannot be reached from a UI path.
+   * taken the user's decision, so re-prompting would be a double gate.
    */
   private async writeNoteWithoutGate(
     content: string,
@@ -148,7 +160,12 @@ export class NoteManager {
     return note.id;
   }
 
-  /** Read the body of the note currently open in the note editor, if any. */
+  /**
+   * Read the note identified by the selected Reader tab in the main window.
+   * Returns its ID, HTML body (empty when absent), and parent ID (null for a
+   * standalone note), or null if resolution fails or finds no note.
+   * Errors reading the resolved note's body propagate to the caller.
+   */
   public async readEditingNote(): Promise<{
     noteID: number;
     content: string;
@@ -167,9 +184,9 @@ export class NoteManager {
    * Best-effort resolution of the note the user is editing.
    *
    * Zotero exposes no plugin API for "the note editor's current note", so this
-   * is a heuristic: an open Reader/note tab whose item is a note. Returns null
-   * when nothing suitable is open; callers then ask for a target explicitly
-   * rather than guessing (see the Task 10 spike finding).
+   * is a heuristic: the selected Reader tab in the main window must reference
+   * a note item. Returns null for other tabs, missing APIs or items, and any
+   * lookup exception (see the Task 10 spike finding).
    */
   private resolveEditingNote(): Zotero.Item | null {
     try {
