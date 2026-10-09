@@ -2,6 +2,66 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.6.0] — 2026-10-09
+
+### Added
+
+- **Collection-level synthesis (`/synthesize [focus]`).** `/compare` sends the
+  whole attached set to the agent in one turn, which overflows context on a real
+  collection and quietly truncates to the head. `/synthesize` summarises the
+  attachment in bounded batches and then folds the batch summaries into one
+  answer.
+  - `src/modules/hermes/SynthesisManager.ts` — the batching and prompt units
+    (`splitIntoBatches`, `buildBatchPrompt`, `foldPrompt`) are pure and carry no
+    Zotero imports, so they are tested directly. An LRU cache keeps the 200 most
+    recent item summaries across runs.
+  - A failed batch is recorded **and excluded from the fold**, so a partial
+    failure never reads as success; `formatBatchReport` names every batch that
+    failed.
+  - Stop cancels **between** batches — `synthesisCancel` is tripped by the
+    sidebar Stop button and by `abortActiveStream`. Previously Stop only aborted
+    the in-flight turn.
+- **Secret vault for the API key.** The key was stored as a plain Zotero
+  preference — in the clear, and readable by anything that can read the profile.
+  It now lives in `<profile>/zotero-hermes/hermes-secrets.json` with `0o600`
+  permissions (`src/utils/SecretVault.ts`). On upgrade, a key found in the
+  `apiKey` preference is migrated on first use and the preference cleared; the
+  migration is written to the audit log as a `permission` entry with a
+  `success`/`blocked` status.
+- **Performance: message cap and lazy mounting**, with a benchmark harness behind
+  `HERMES_BENCH=1` (`test/benchmark.test.ts`) and notes in `docs/perf-notes.md`.
+- **Documentation:** a user guide (`docs/user-guide.md`) and FAQ (`docs/faq.md`).
+
+### Changed
+
+- **Chat memory cap (`MAX_MEMORY_MESSAGES = 300`).** A conversation longer than
+  300 messages is trimmed to the most recent 300 when loaded from disk and when
+  appended to. The persisted conversation file is never rewritten by the cap.
+- Chat saves are debounced by 500 ms (`SAVE_DEBOUNCE_MS`) so a streamed response
+  does not trigger a disk write per chunk.
+
+### Fixed
+
+- **`ApprovalDialog` could hang forever.** `enqueueDialog` returned a promise it
+  never settled when `showDialog` rejected, so `runWrite` awaited indefinitely and
+  the mutation was neither applied nor audited. Rejections are now forwarded
+  (`src/modules/hermes/ApprovalDialog.ts`).
+- Six `hermesProfile` tests failed on rename collateral: the fixture created
+  `profiles/zotero-hermes` while the assertions expected `profiles/logios`.
+
+### Notes
+
+- The Wave-1 integration suites (`writeGates.integration.test.ts`,
+  `chatFlow.integration.test.ts`) previously asserted only that a `ChatManager`
+  held messages, and tested the mock rather than the gate. They now drive the real
+  cross-module chain: `ApprovalDialog` → `runWrite` → `item.saveTx()`, observed by
+  an audit sink.
+- **Identity rename (in progress).** The plugin is **Logios** (repo
+  `techne-tools/logios`). The on-disk storage directory and the addon
+  ID/ref/prefs prefix stay `zotero-hermes` / `hermes` deliberately — renaming
+  those would orphan saved conversations, exports and stored preferences. See
+  `RENAME.md`.
+
 ## [0.5.0] — 2026-10-08
 
 ### Added
