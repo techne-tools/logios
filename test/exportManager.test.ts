@@ -103,6 +103,8 @@ describe("ExportManager", function () {
       itemType: "conferencePaper",
       creators: ["Vaswani et al."],
       date: "2017",
+      abstract: "The dominant sequence transduction models...",
+      tags: ["transformers", "attention"],
       citekey: "vaswani2017attention",
       attachmentKey: "PDF1",
     };
@@ -114,6 +116,8 @@ describe("ExportManager", function () {
       itemType: "conferencePaper",
       creators: ["Devlin et al."],
       date: "2018",
+      abstract: "We introduce a new language representation model...",
+      tags: ["nlp", "transformers"],
       citekey: "devlin2018bert",
       attachmentKey: "PDF2",
     };

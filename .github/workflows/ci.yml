@@ -28,6 +28,8 @@ jobs:
         uses: techne-tools/zotero-plugin-workflows/setup-js@v1.1.0-techne.1
       - name: Run Build
         run: npm run build
+      - name: Typecheck test/
+        run: npm run typecheck:test
       - name: Upload build result
         uses: actions/upload-artifact@v7
         with:

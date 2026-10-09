@@ -1,9 +1,8 @@
 import { expect } from "chai";
-import type Addon from "../../src/addon";
+import type Addon from "../src/addon";
 import { ChatManager } from "../src/modules/hermes/ChatManager";
 import type { Conversation } from "../src/modules/hermes/ConversationManager";
 import type { ChatMessage } from "../src/views/types";
-import type { Zotero } from "../../src/types/zotero";
 
 /**
  * Mock ChatClient for testing
@@ -207,7 +206,7 @@ describe("Benchmark Test", function () {
     const chatManager = new ChatManager(addon);
 
     // Start with a new conversation
-    addon.data.hermes.conversations.createConversation();
+    addon.data.hermes!.conversations.createConversation();
 
     // Benchmark extractItemData equivalent (creating synthetic items)
     console.log("[Zotero.debug] Benchmark: extractItemData × 100");

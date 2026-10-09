@@ -308,8 +308,8 @@ describe("ConversationManager", function () {
       expect(manager.getCurrentConversation()?.messages).to.have.length(1);
     } catch (err) {
       // AGENTS.md gotcha: chai assertion messages are lost in the reporter;
-      // surface the message via window.debug when available.
-      (window as any).debug?.(`M1 failure: ${(err as Error).message}`);
+      // surface the message via globalThis.debug when available.
+      (globalThis as any).debug?.(`M1 failure: ${(err as Error).message}`);
       throw err;
     }
   });

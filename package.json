@@ -24,6 +24,7 @@
     "start": "zotero-plugin serve",
     "serve": "zotero-plugin serve",
     "build": "zotero-plugin build && tsc --noEmit",
+    "typecheck:test": "tsc --noEmit -p tsconfig.test.json",
     "lint": "npm run lint:check",
     "lint:check": "prettier --check . && eslint .",
     "lint:fix": "prettier --write . && eslint . --fix",
