@@ -44,6 +44,27 @@ export function escapeCitationText(text: string): string {
 }
 
 /**
+ * Decode the same five entities — the inverse of `escapeCitationText`.
+ *
+ * CSL bibliography output is HTML, so once its tags are stripped it still
+ * carries entities ("Smith &amp; Jones"). Inserting that text into a note would
+ * show a literal `&amp;`, and passing it through `escapeCitationText` first
+ * would compound it to `&amp;amp;`. Decode before the text is re-escaped for
+ * the note body.
+ *
+ * `&amp;` is decoded LAST so a doubly-escaped input ("&amp;lt;") collapses to
+ * the literal "&lt;" rather than being decoded twice into "<".
+ */
+export function decodeHtmlEntities(text: string): string {
+  return text
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, "&");
+}
+
+/**
  * Build the resulting note body for a citation at `position`.
  * Trims and HTML-escapes the plain-text citation into a paragraph. Returns
  * that paragraph as `insertion`, the full HTML as `newContent`, and `position`.

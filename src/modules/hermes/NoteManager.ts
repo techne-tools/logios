@@ -48,59 +48,42 @@ export class NoteManager {
    * insertion, routes the apply through the gate, and returns the outcome. The
    * mutation itself is still `setNote` + `saveTx` — identical to `writeNote`.
    *
-   * Target resolution:
-   *   - `noteID` given → that note must exist and be a note, else throw. A
-   *     missing *named* target is a caller bug, not a user decision (same rule as
-   *     `ItemManager.updateItemMetadataGated`).
-   *   - `noteID` null or omitted → `parentItemID` must be supplied; a fresh
-   *     child note is created under it. `noteID` takes precedence when both exist.
-   *   - With neither ID, returns `failed` without prompting or writing.
+   * The target is ALWAYS a named note: the one open in the editor, resolved by
+   * `readEditingNote()`. There is deliberately no "create a note" fallback — a
+   * click with no editor open used to spawn a fresh child note under the
+   * attached item, so repeated clicks produced duplicate notes. The caller
+   * reports the missing-target case to the user instead.
    *
    * `styleName` labels the approval preview; it does not format the citation.
    * Returns `success` with the saved note ID, `rejected` without a mutation,
    * or `failed` with an error for approval or write failures. If no approval
    * dialog is configured, the write proceeds without prompting.
    *
-   * @throws If a supplied target is missing, `noteID` identifies a non-note,
-   * or the citation is blank. Errors reading the target before approval also
-   * propagate, as do errors escaping the gate's audit or error-reporting calls.
+   * @throws If `noteID` does not resolve to a note, or the citation is blank.
+   * Errors reading the target before approval also propagate, as do errors
+   * escaping the gate's audit or error-reporting calls.
    */
   public async insertCitationIntoNote(opts: {
     citation: string;
     position: InsertPosition;
-    noteID?: number | null;
-    parentItemID?: number | null;
+    noteID: number;
     styleName?: string;
   }): Promise<WriteResult & { noteID?: number }> {
-    const { citation, position, styleName } = opts;
-    const noteID = opts.noteID ?? null;
-    const parentItemID = opts.parentItemID ?? null;
+    const { citation, position, styleName, noteID } = opts;
 
-    if (noteID === null && parentItemID === null) {
-      return {
-        status: "failed",
-        error: "No target note or parent item to insert a citation into.",
-      };
+    const note = (await Zotero.Items.getAsync(noteID)) || null;
+    if (!note || note.itemType !== "note") {
+      throw new Error(`Note with ID ${noteID} not found.`);
     }
+    const existing = note.getNote() || "";
 
-    // Resolve the target up front so the approval prompt names it accurately.
-    let targetLabel: string;
-    let existing = "";
-    let note: Zotero.Item | null = null;
-
-    if (noteID !== null) {
-      note = (await Zotero.Items.getAsync(noteID)) || null;
-      if (!note || note.itemType !== "note") {
-        throw new Error(`Note with ID ${noteID} not found.`);
-      }
-      existing = note.getNote() || "";
-      targetLabel = "the note being edited";
-    } else {
-      const parent = (await Zotero.Items.getAsync(parentItemID!)) || null;
-      if (!parent) {
-        throw new Error(`Item with ID ${parentItemID} not found.`);
-      }
-      targetLabel = `a note under "${parent.getDisplayTitle()}"`;
+    // Name the target in the prompt so the user approves a specific note, not
+    // an anonymous write.
+    const parentID = note.parentItemID;
+    let targetLabel = `note ${noteID}`;
+    if (parentID) {
+      const parent = (await Zotero.Items.getAsync(parentID)) || null;
+      if (parent) targetLabel = `note under "${parent.getDisplayTitle()}"`;
     }
 
     const plan = buildCitationInsertion(existing, citation, position);
@@ -110,22 +93,12 @@ export class NoteManager {
       action: "Insert citation",
       target: targetLabel,
       changes,
-      changeAction: noteID === null ? "create" : "modify",
-      metadata: { noteID, parentItemID, position, styleName },
+      changeAction: "modify",
+      metadata: { noteID, position, styleName },
       apply: async () => {
-        if (note) {
-          note.setNote(plan.newContent);
-          await note.saveTx();
-          return note.id;
-        }
-        // Creating a child note: writeNote owns the parent/lib resolution and
-        // its own audit; skipApproval is false here already, and we are inside
-        // an approved apply(), so its internal dialog must not re-prompt.
-        const created = await this.writeNoteWithoutGate(
-          plan.newContent,
-          parentItemID!,
-        );
-        return created;
+        note.setNote(plan.newContent);
+        await note.saveTx();
+        return note.id;
       },
     });
 
@@ -136,35 +109,9 @@ export class NoteManager {
   }
 
   /**
-   * Save `content` as note HTML without escaping it and return the new note ID.
-   * Uses the parent's library when it resolves; otherwise creates a standalone
-   * note in the user library. Lookup and save errors propagate to the caller.
-   *
-   * Only for use inside an already-approved `runWrite.apply()` — the caller has
-   * taken the user's decision, so re-prompting would be a double gate.
-   */
-  private async writeNoteWithoutGate(
-    content: string,
-    parentItemID: number,
-  ): Promise<number> {
-    const note = new Zotero.Item("note");
-    let libraryID = Zotero.Libraries.userLibraryID;
-    const parent = (await Zotero.Items.getAsync(parentItemID)) || null;
-    if (parent) {
-      libraryID = parent.libraryID;
-      note.parentItemID = parentItemID;
-    }
-    note.libraryID = libraryID;
-    note.setNote(content);
-    await note.saveTx();
-    return note.id;
-  }
-
-  /**
-   * Read the note identified by the selected Reader tab in the main window.
+   * Read the note open in Zotero's note editor, if any.
    * Returns its ID, HTML body (empty when absent), and parent ID (null for a
-   * standalone note), or null if resolution fails or finds no note.
-   * Errors reading the resolved note's body propagate to the caller.
+   * standalone note), or null when no note editor is open or resolution fails.
    */
   public async readEditingNote(): Promise<{
     noteID: number;
@@ -181,25 +128,36 @@ export class NoteManager {
   }
 
   /**
-   * Best-effort resolution of the note the user is editing.
+   * Resolve the note open in Zotero's note editor, if any.
    *
-   * Zotero exposes no plugin API for "the note editor's current note", so this
-   * is a heuristic: the selected Reader tab in the main window must reference
-   * a note item. Returns null for other tabs, missing APIs or items, and any
-   * lookup exception (see the Task 10 spike finding).
+   * Zotero opens notes as TABS (`Zotero_Tabs.add({ type: 'note-unloaded' })` in
+   * `data/notes.js`) and each tab's `EditorInstance` registers itself with
+   * `Zotero.Notes.registerEditorInstance`, retrievable by tab id via
+   * `Zotero.Notes.getByTabID(tabID)`. `EditorInstance.itemID` is the public
+   * getter for the note.
+   *
+   * Two traps this avoids:
+   *   - `Zotero_Tabs.selectedID` / `selectedType` are *properties*, not methods.
+   *     Calling `getSelectedType()` throws and the catch would swallow it, so
+   *     the resolver silently returned null forever.
+   *   - A note tab and a reader tab are different `selectedType` values, so
+   *     matching on "reader" and calling `Zotero.Reader.getByTabID` can never
+   *     find a note. The tab id is used directly instead.
+   *
+   * Returns null when no note editor is open; callers must then tell the user
+   * rather than guessing a target.
    */
   private resolveEditingNote(): Zotero.Item | null {
     try {
       const win: any = Zotero.getMainWindow();
       const tabs = win?.Zotero_Tabs;
-      if (!tabs || typeof tabs.getSelectedType !== "function") return null;
-      if (tabs.getSelectedType() !== "reader") return null;
-      const selected = tabs.getSelectedID?.();
-      const reader = selected
-        ? Zotero.Reader?.getByTabID?.(selected)
-        : undefined;
-      const itemID = reader?.itemID;
+      const tabID = tabs?.selectedID;
+      if (!tabID) return null;
+
+      const instance = (Zotero as any).Notes?.getByTabID?.(tabID);
+      const itemID = instance?.itemID;
       if (!itemID) return null;
+
       const item = Zotero.Items.get(itemID);
       if (item && item.itemType === "note") return item;
       return null;

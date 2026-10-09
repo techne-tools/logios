@@ -82,18 +82,6 @@ describe("NoteManager.insertCitationIntoNote", function () {
     }
   });
 
-  it("fails soft when neither a note nor a parent is supplied", async function () {
-    const { manager, approvals } = makeHarness();
-    const result = await manager.insertCitationIntoNote({
-      citation: "(Lee, 2024)",
-      position: "bottom",
-    });
-    expect(result.status).to.equal("failed");
-    expect(result.error).to.match(/no target/i);
-    // No prompt should have been raised for a write that cannot happen.
-    expect(approvals).to.have.length(0);
-  });
-
   it("appends to an existing note, then records success", async function () {
     const { manager, approvals, audits } = makeHarness();
     const savedContentRef = { value: null as string | null };
@@ -197,24 +185,6 @@ describe("NoteManager.insertCitationIntoNote", function () {
     expect(threw).to.equal(true);
   });
 
-  it("throws when the parent item for a new note does not exist", async function () {
-    const { manager } = makeHarness();
-    stubGetAsync(new Map());
-
-    let threw = false;
-    try {
-      await manager.insertCitationIntoNote({
-        citation: "(Lee, 2024)",
-        position: "bottom",
-        parentItemID: 500,
-      });
-    } catch (err) {
-      threw = true;
-      expect((err as Error).message).to.include("500");
-    }
-    expect(threw).to.equal(true);
-  });
-
   it("refuses an empty citation before prompting", async function () {
     const note = {
       id: 42,
@@ -238,5 +208,114 @@ describe("NoteManager.insertCitationIntoNote", function () {
     }
     expect(threw).to.equal(true);
     expect(approvals).to.have.length(0);
+  });
+
+  it("names the parent item in the approval prompt, not an anonymous note", async function () {
+    const note = {
+      id: 42,
+      itemType: "note",
+      parentItemID: 7,
+      getNote: () => "",
+      setNote: () => {},
+      saveTx: async () => {},
+    };
+    const parent = { id: 7, getDisplayTitle: () => "The Soundscape" };
+    const { manager, approvals } = makeHarness();
+    stubGetAsync(
+      new Map<number, any>([
+        [42, note],
+        [7, parent],
+      ]),
+    );
+
+    const result = await manager.insertCitationIntoNote({
+      citation: "(Schafer, 1977)",
+      position: "bottom",
+      noteID: 42,
+    });
+
+    expect(result.status).to.equal("success");
+    expect(approvals[0].newContent).to.include('note under "The Soundscape"');
+  });
+});
+
+describe("NoteManager.readEditingNote", function () {
+  after(function () {
+    if ((globalThis as any).__realZotero) {
+      (globalThis as any).Zotero = (globalThis as any).__realZotero;
+      delete (globalThis as any).__realZotero;
+    }
+  });
+
+  /**
+   * Overlay only the pieces the resolver touches. `selectedID` is a PROPERTY on
+   * Zotero_Tabs (`Object.defineProperty(this, 'selectedID', { get ... })`), and
+   * a note's editor instance is looked up with `Zotero.Notes.getByTabID(tabID)`
+   * returning an object whose `itemID` is a getter.
+   */
+  function stubTabsAndNotes(opts: {
+    selectedID?: string | null;
+    instance?: { itemID: number } | null;
+    items?: Map<number, any>;
+  }) {
+    const realZotero = (globalThis as any).Zotero;
+    if (!(globalThis as any).__realZotero) {
+      (globalThis as any).__realZotero = realZotero;
+    }
+    (globalThis as any).Zotero = {
+      ...realZotero,
+      getMainWindow: () => ({
+        Zotero_Tabs: { selectedID: opts.selectedID ?? null },
+      }),
+      Notes: { getByTabID: () => opts.instance ?? null },
+      Items: {
+        get: (id: number) => (opts.items ?? new Map()).get(id) ?? null,
+      },
+    };
+  }
+
+  it("resolves the note open in a note tab via Notes.getByTabID", async function () {
+    const note = {
+      id: 42,
+      itemType: "note",
+      parentItemID: 7,
+      getNote: () => "<p>Draft.</p>",
+    };
+    stubTabsAndNotes({
+      selectedID: "tab-1",
+      instance: { itemID: 42 },
+      items: new Map([[42, note]]),
+    });
+
+    const manager = new NoteManager({ log: () => {}, data: {} } as any);
+    const editing = await manager.readEditingNote();
+
+    expect(editing).to.not.be.null;
+    expect(editing?.noteID).to.equal(42);
+    expect(editing?.content).to.equal("<p>Draft.</p>");
+    expect(editing?.parentItemID).to.equal(7);
+  });
+
+  it("returns null when the selected tab has no note editor", async function () {
+    stubTabsAndNotes({ selectedID: "tab-1", instance: null });
+    const manager = new NoteManager({ log: () => {}, data: {} } as any);
+    expect(await manager.readEditingNote()).to.be.null;
+  });
+
+  it("returns null when no tab is selected", async function () {
+    stubTabsAndNotes({ selectedID: null, instance: { itemID: 42 } });
+    const manager = new NoteManager({ log: () => {}, data: {} } as any);
+    expect(await manager.readEditingNote()).to.be.null;
+  });
+
+  it("returns null when the resolved item is not a note", async function () {
+    // A reader tab's editor instance resolves to a PDF, not a note.
+    stubTabsAndNotes({
+      selectedID: "tab-2",
+      instance: { itemID: 9 },
+      items: new Map([[9, { id: 9, itemType: "attachment" }]]),
+    });
+    const manager = new NoteManager({ log: () => {}, data: {} } as any);
+    expect(await manager.readEditingNote()).to.be.null;
   });
 });

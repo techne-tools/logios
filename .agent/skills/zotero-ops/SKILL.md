@@ -308,10 +308,23 @@ updateURL: `https://github.com/{{owner}}/{{repo}}/releases/download/release/${
 - `0.6.0` → `update.json` (stable)
 - `0.7.0-beta.1`, `1.0.0-rc.2` → `update-beta.json` (pre-release)
 
-Both files are published to the `release` tag by every release, alongside the
-version tag. In practice the two files are currently **byte-identical** — only
-the _filename_ selects the channel, so a pre-release publishes to `update-beta.json`
-and a stable publish to `update.json` without either clobbering the other.
+**Which manifests a release publishes.** Verified against the scaffold
+(`zotero-plugin-scaffold/dist/shared/scaffold-src-*.mjs`): `update-beta.json` is
+written unconditionally, `update.json` **only** when the version is not a
+pre-release; the uploader then deletes and re-uploads exactly the manifests it
+generated, so anything it did not generate is left in place.
+
+- **Stable release** — generates and uploads **both** `update.json` and
+  `update-beta.json`.
+- **Pre-release** — generates and uploads **only** `update-beta.json`. An
+  existing `update.json` on the `release` tag is **preserved**, not rewritten.
+- **First-ever pre-release** (no stable release yet) — the `release` tag carries
+  `update-beta.json` only, and there is **no** `update.json` at all until the
+  first stable release. Installed stable users therefore do not see the
+  pre-release.
+
+Only the _filename_ selects the channel; for the same version the two files hold
+identical content.
 
 ### Dry-run (no publish) — proves the channel logic locally
 
@@ -332,13 +345,22 @@ cat .scaffold/build/update.json
 ```
 
 Expect: the filename in `update_url` matches the version's channel, and the
-`update_hash` in the generated manifest equals
-`shasum -a 512 .scaffold/build/logios.xpi`.
+hex digest in the generated manifest's `update_hash` — after stripping its
+`sha512:` prefix — equals the hex digest printed by
+
+```bash
+shasum -a 512 .scaffold/build/logios.xpi | awk '{print $1}'
+```
+
+Compare the **digest only**: `shasum` also prints the filename, and the manifest
+value carries the `sha512:` prefix, so neither side is compared verbatim.
 
 ### Channel-verification checklist (after the workflow goes green)
 
-- [ ] Rolling `release` tag exists and carries both manifests:
+- [ ] Rolling `release` tag carries the manifests the channel implies:
       `gh release view release --repo techne-tools/logios --json assets --jq '[.assets[].name]'`
+      (stable → `update.json` + `update-beta.json`; pre-release → `update-beta.json`,
+      with `update.json` present only once a stable release exists)
 - [ ] `update.json` is served (200) from the tag the `update_url` names:
 
       ```bash
@@ -348,8 +370,8 @@ Expect: the filename in `update_url` matches the version's channel, and the
 
 - [ ] The advertised `version` in the live manifest equals `package.json`
 - [ ] `update_hash` matches the published XPI (see Post-Release Verification §1)
-- [ ] For a pre-release: `update-beta.json` carries the new version and
-      `update.json` still carries the last stable one
+- [ ] For a pre-release: `update-beta.json` carries the new version, and
+      `update.json` — if present — still carries the last stable version
 
 **Verified 2026-10-09 for v0.6.0** — stable channel; `release` tag carries
 `update-beta.json` + `update.json`; live `update.json` returns HTTP 200 and

@@ -2,6 +2,7 @@ import { expect } from "chai";
 import {
   buildCitationDiff,
   buildCitationInsertion,
+  decodeHtmlEntities,
   escapeCitationText,
   positionLabel,
 } from "../src/modules/hermes/citationInsert";
@@ -31,6 +32,30 @@ describe("citationInsert", function () {
 
     it("leaves a plain author-year citation untouched", function () {
       expect(escapeCitationText("(Schafer, 1977)")).to.equal("(Schafer, 1977)");
+    });
+  });
+
+  describe("decodeHtmlEntities", function () {
+    it("is the inverse of escapeCitationText for the five characters", function () {
+      const raw = "Smith & Jones <2020> \"q\" 'r'";
+      expect(decodeHtmlEntities(escapeCitationText(raw))).to.equal(raw);
+    });
+
+    it("decodes an escaped ampersand that would otherwise reach the note verbatim", function () {
+      // CSL bibliography HTML arrives as "Smith &amp; Jones"; left undecoded it
+      // inserts the literal "&amp;" (and re-escaping compounds it to "&amp;amp;").
+      expect(decodeHtmlEntities("Smith &amp; Jones")).to.equal("Smith & Jones");
+    });
+
+    it("decodes &amp; LAST so a doubly-escaped entity collapses one level", function () {
+      // "&amp;lt;" is the text "&lt;", not "<".
+      expect(decodeHtmlEntities("&amp;lt;")).to.equal("&lt;");
+    });
+
+    it("round-trips through escape -> decode -> escape unchanged", function () {
+      const raw = "A & B <c> \"d\" 'e'";
+      const once = escapeCitationText(raw);
+      expect(escapeCitationText(decodeHtmlEntities(once))).to.equal(once);
     });
   });
 

@@ -636,13 +636,16 @@ All features must follow Logios coding conventions.
    Zotero's own plumbing, not a plugin hook. Ghost text is dropped from the
    roadmap. See `docs/superpowers/spikes/ghost-text-spike.md`; spec §9 and open
    question 3, both resolved.
-7. **Citations insert into notes at top/bottom only (2026-10-09).** `/cite`
-   emits "Insert at top / bottom of note" pills; the click routes through
-   `NoteManager.insertCitationIntoNote` → the `runWrite` approval gate → a
-   `setNote`+`saveTx` apply, audited either way. Cursor-position insertion is not
-   offered because reading the note editor's caret is the same infeasibility as
-   ghost text (constraint 6). Target resolution prefers the open note editor and
-   otherwise asks the user to attach an item — it never guesses silently.
+7. **Citations insert into the OPEN note at top/bottom only (2026-10-09).**
+   `/cite` emits "Insert at top / bottom of open note" pills; the click routes
+   through `NoteManager.insertCitationIntoNote` → the `runWrite` approval gate →
+   a `setNote`+`saveTx` apply, audited either way. The target is the note open in
+   Zotero's note editor, resolved from the selected tab via
+   `Zotero.Notes.getByTabID` (`Zotero_Tabs.selectedID` is a _property_, not a
+   method). With no note open the click is **refused** — there is no
+   create-a-note fallback, because that spawned a duplicate note on every click.
+   Cursor-position insertion is not offered: reading the note editor's caret is
+   the same infeasibility as ghost text (constraint 6).
 
 ---
 

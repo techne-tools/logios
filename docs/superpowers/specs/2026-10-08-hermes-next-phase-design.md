@@ -233,8 +233,12 @@ mention this phrase?" against the real index.
 
 **Intent**: close research→writing without copy-paste from `/cite`.
 
-- V1 bounds: citation insertion into Zotero notes at **top or bottom** only
-  (in-sandbox cursor positioning is the spike question deferred to ghost-text).
+- V1 bounds: citation insertion into Zotero notes at **top or bottom** only.
+  Cursor-position insertion is **out of scope, not deferred**: reading the note
+  editor's caret is infeasible in the plugin sandbox (see the §9 spike result).
+- Target: the note open in the editor, resolved from the selected tab via
+  `Zotero.Notes.getByTabID`. With no note open the click is refused rather than
+  guessing a target (the earlier create-a-note fallback produced duplicates).
 - Flow: assistant proposes citations via existing `action:` pills → new pill
   `insert-citation:` → `runWrite` gate targeting `NoteManager.writeNote`
   (diff = exact insertion, position named) → audited.

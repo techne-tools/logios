@@ -836,10 +836,10 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
 
     /**
      * Open web links externally and dispatch plugin action links from messages.
-     * Citation links target the selected Reader note or a new note under the
-     * first attached item; malformed links and missing targets show an error.
+     * Citation links target the note open in Zotero's note editor; with no note
+     * open the click is refused with an error rather than guessing a target.
      * Insertion outcomes are shown in chat, and insertion errors in the error
-     * banner. Errors reading the selected note before insertion propagate.
+     * banner. Errors reading the open note before insertion propagate.
      */
     const handler = async (e: MouseEvent) => {
       const target = e.target as HTMLElement;
@@ -981,23 +981,14 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
           return;
         }
 
-        // Resolve the target: prefer the note open in the editor; otherwise
-        // fall back to a note under the first attached item. Zotero exposes no
-        // "current note" API, so we never guess silently — if neither exists we
-        // say so and stop before any write.
-        let noteID: number | null = null;
-        let parentItemID: number | null = null;
+        // Target: the note open in Zotero's note editor. We never guess —
+        // without an open note there is no sensible target, and the previous
+        // "create a note under the attached item" fallback spawned a duplicate
+        // note on every click. Tell the user instead.
         const editing = await hermes.notes.readEditingNote();
-        if (editing) {
-          noteID = editing.noteID;
-        } else {
-          const attached = hermes.items.getAttachedItems();
-          parentItemID = attached[0]?.id ?? null;
-        }
-
-        if (noteID === null && parentItemID === null) {
+        if (!editing) {
           setError(
-            "No target note. Open a note in the editor, or attach a paper first.",
+            "No note is open. Open the note you want the citation in, then click the pill again.",
           );
           return;
         }
@@ -1006,8 +997,7 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
           const result = await hermes.notes.insertCitationIntoNote({
             citation: citationText,
             position,
-            noteID,
-            parentItemID,
+            noteID: editing.noteID,
           });
           const message =
             result.status === "success"
