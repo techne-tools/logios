@@ -85,8 +85,7 @@ export interface LookupOptions {
   semanticScholarApiKey?: string;
 }
 
-const USER_AGENT =
-  "hermes-zotero/0.4 (https://github.com/techne-tools/logios)";
+const USER_AGENT = "hermes-zotero/0.4 (https://github.com/techne-tools/logios)";
 
 /**
  * Map a CrossRef/DataCite `type` to a Zotero item type.

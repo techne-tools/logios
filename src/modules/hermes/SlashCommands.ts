@@ -1,6 +1,11 @@
 import type Addon from "../../addon";
 import type { AnnotationQuery } from "./AnnotationManager";
 import { isDoiLike, normaliseDoi } from "./LookupManager";
+import {
+  formatBatchReport,
+  SynthesisManager,
+  synthesisCancel,
+} from "./SynthesisManager";
 
 export type SlashCommandResult =
   null | string | { sendPrompt: string; systemMessage?: string };
@@ -1074,6 +1079,40 @@ ${list}${results.length > 15 ? `\n\n*…and ${results.length - 15} more.*` : ""}
 *Edit one with \`/anno-edit <key> comment=...\`.*`;
     },
     name: "anno-search",
+  },
+  {
+    description:
+      "Synthesise a whole collection or the attached set in bounded batches, then fold. Usage: `/synthesize [focus]`",
+    execute: async (addon, args) => {
+      const attached = addon.data.hermes?.items.getAttachedItems() || [];
+      if (attached.length === 0) {
+        return "Nothing attached. Use `/collection` to attach a whole collection or `/context` for selected items, then run `/synthesize`.";
+      }
+
+      const client = addon.data.hermes?.client as any;
+      if (
+        !client ||
+        typeof client.onUpdate !== "function" ||
+        typeof client.sendPrompt !== "function"
+      ) {
+        return "No chat client is connected. Connect Hermes in Settings, then retry `/synthesize`.";
+      }
+
+      // Identify items by citekey when present, else title — the same label the
+      // batch prompt prints, so the model can cite them back.
+      const ids = attached.map((i) => (i.citekey ? `@${i.citekey}` : i.title));
+      const focus = args.trim();
+      const manager = new SynthesisManager();
+
+      // Clear any stale cancel from a previous run before starting.
+      synthesisCancel.clear();
+      const outcome = await manager.synthesize(ids, focus, client, {
+        shouldCancel: () => synthesisCancel.requested,
+      });
+
+      return formatBatchReport(outcome);
+    },
+    name: "synthesize",
   },
 ];
 

@@ -58,12 +58,12 @@ find-and-replace.
 
 From `package.json` (`config`):
 
-| key             | value                        | why frozen                          |
-|-----------------|------------------------------|-------------------------------------|
-| `addonID`       | `hermes@techne-tools.org`    | the update path keys off this       |
-| `addonRef`      | `hermes`                     | code/prefs namespace                |
-| `addonInstance` | `HermesAgent`                | runtime instance id                 |
-| `prefsPrefix`   | `extensions.zotero.hermes`   | every stored preference lives here  |
+| key             | value                      | why frozen                         |
+| --------------- | -------------------------- | ---------------------------------- |
+| `addonID`       | `hermes@techne-tools.org`  | the update path keys off this      |
+| `addonRef`      | `hermes`                   | code/prefs namespace               |
+| `addonInstance` | `HermesAgent`              | runtime instance id                |
+| `prefsPrefix`   | `extensions.zotero.hermes` | every stored preference lives here |
 
 Changing any of these breaks updates for everyone already installed and
 drops their preferences.

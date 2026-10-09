@@ -1,4 +1,5 @@
 import { config } from "../../package.json";
+import { SecretVault } from "../utils/SecretVault";
 
 /**
  * Initialize the Hermes preferences UI.
@@ -169,10 +170,20 @@ function bindPrefEvents(): void {
         ""
       ).replace(/\/$/, "");
 
-      const apiKey =
+      const apiKeyFromPrefs =
         keyInput?.value ||
         addon.data.hermes?.preferences?.get("apiKey", "") ||
         "";
+
+      // Try to get API key from secret vault first
+      let apiKey = apiKeyFromPrefs;
+      if (!apiKey || apiKey === "") {
+        const secretVault = new SecretVault(addon.data.hermes);
+        const vaultApiKey = await secretVault.getSecret("apiKey");
+        if (vaultApiKey !== null && vaultApiKey !== "") {
+          apiKey = vaultApiKey;
+        }
+      }
 
       if (!apiUrl) {
         (doc.defaultView as any)?.alert(
@@ -204,6 +215,29 @@ function bindPrefEvents(): void {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
       (doc.defaultView as any)?.alert(`Remote connection failed: ${message}`);
+    }
+  });
+
+  // Clear API Key button
+  const clearApiKeyBtn = doc.getElementById(
+    `zotero-prefpane-${config.addonRef}-clear-api-key`,
+  );
+  clearApiKeyBtn?.addEventListener("click", async () => {
+    if (addon.data.hermes?.preferences) {
+      // Clear from both preferences and secret vault
+      addon.data.hermes.preferences.set("apiKey", "");
+      const secretVault = new SecretVault(addon.data.hermes);
+      await secretVault.deleteSecret("apiKey");
+
+      // Clear the input field
+      const keyInput = doc.getElementById(
+        `zotero-prefpane-${config.addonRef}-api-key`,
+      ) as HTMLInputElement | null;
+      if (keyInput) {
+        keyInput.value = "";
+      }
+
+      (doc.defaultView as any)?.alert("API key cleared successfully.");
     }
   });
 

@@ -3,6 +3,7 @@ import type Addon from "../../addon";
 import { buildPersonaPrompt, buildItemContext } from "./systemPrompt";
 import type { ChatClient, ChatSessionUpdate, PromptContextItem } from "./types";
 import { getDataDirPath } from "../../utils/zoteroPaths";
+import { SecretVault } from "../../utils/SecretVault";
 
 /**
  * Client for the Hermes Agent REST API with Server-Sent Events streaming.
@@ -19,6 +20,7 @@ import { getDataDirPath } from "../../utils/zoteroPaths";
 export class HermesApiClient implements ChatClient {
   private _isConnected = false;
   private readonly addon: Addon;
+  private readonly secretVault: SecretVault;
   private activeAbortController: AbortController | null = null;
   private messageCallbacks: ((update: ChatSessionUpdate) => void)[] = [];
   private errorCallbacks: ((error: Error) => void)[] = [];
@@ -40,6 +42,7 @@ export class HermesApiClient implements ChatClient {
 
   constructor(addon: Addon) {
     this.addon = addon;
+    this.secretVault = new SecretVault(addon);
   }
 
   public isReady(): boolean {
@@ -71,7 +74,7 @@ export class HermesApiClient implements ChatClient {
 
       const response = await fetch(url, {
         method: "GET",
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
       });
 
       if (!response.ok) {
@@ -183,7 +186,7 @@ export class HermesApiClient implements ChatClient {
       const response = await fetch(url, {
         method: "POST",
         headers: {
-          ...this.getAuthHeaders(),
+          ...(await this.getAuthHeaders()),
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -363,12 +366,19 @@ export class HermesApiClient implements ChatClient {
     ).replace(/\/$/, "");
   }
 
-  private getApiKey(): string {
+  private async getApiKey(): Promise<string> {
+    // Try to get from secret vault first
+    const secret = await this.secretVault.getSecret("apiKey");
+    if (secret !== null && secret !== "") {
+      return secret;
+    }
+
+    // Fall back to preferences
     return this.addon.data.hermes?.preferences?.get<string>("apiKey", "") || "";
   }
 
-  private getAuthHeaders(): Record<string, string> {
-    const apiKey = this.getApiKey();
+  private async getAuthHeaders(): Promise<Record<string, string>> {
+    const apiKey = await this.getApiKey();
     return apiKey ? { Authorization: `Bearer ${apiKey}` } : {};
   }
 
@@ -387,7 +397,7 @@ export class HermesApiClient implements ChatClient {
     try {
       const response = await fetch(url, {
         headers: {
-          ...this.getAuthHeaders(),
+          ...(await this.getAuthHeaders()),
           "Content-Type": "application/json",
         },
       });

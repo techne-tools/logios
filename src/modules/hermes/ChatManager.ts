@@ -3,6 +3,12 @@ import type { Conversation } from "./ConversationManager";
 import { ChatMessage, ContextItem } from "../../views/types";
 
 /**
+ * Maximum number of messages to keep in memory for performance.
+ * Persisted conversation JSON is untouched; only in-memory storage is capped.
+ */
+export const MAX_MEMORY_MESSAGES = 300;
+
+/**
  * Manages chat conversations and state for Hermes Agent.
  * Integrates with ConversationManager for persistence.
  *
@@ -58,7 +64,23 @@ export class ChatManager {
   }
 
   public setMessages(newMessages: ChatMessage[]): void {
-    this.messages = newMessages;
+    // Apply memory cap: keep only the most recent MAX_MEMORY_MESSAGES
+    if (newMessages.length > MAX_MEMORY_MESSAGES) {
+      // Keep the most recent messages
+      this.messages = newMessages.slice(
+        newMessages.length - MAX_MEMORY_MESSAGES,
+      );
+      // Add marker message indicating truncation
+      const markerMessage: ChatMessage = {
+        id: `marker-${Date.now()}`,
+        role: "system",
+        content: "earlier messages in saved conversation",
+        timestamp: Date.now(),
+      };
+      this.messages = [markerMessage, ...this.messages];
+    } else {
+      this.messages = newMessages;
+    }
     this.scheduleSave();
   }
 
@@ -74,7 +96,22 @@ export class ChatManager {
       clearTimeout(this.saveTimer);
       this.saveTimer = null;
     }
-    this.messages = conv.messages || [];
+    // Apply memory cap: keep only the most recent MAX_MEMORY_MESSAGES
+    const messages = conv.messages || [];
+    if (messages.length > MAX_MEMORY_MESSAGES) {
+      // Keep the most recent messages
+      this.messages = messages.slice(messages.length - MAX_MEMORY_MESSAGES);
+      // Add marker message indicating truncation
+      const markerMessage: ChatMessage = {
+        id: `marker-${Date.now()}`,
+        role: "system",
+        content: "earlier messages in saved conversation",
+        timestamp: Date.now(),
+      };
+      this.messages = [markerMessage, ...this.messages];
+    } else {
+      this.messages = messages;
+    }
   }
 
   /**

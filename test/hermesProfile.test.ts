@@ -73,7 +73,7 @@ describe("HermesProfile", function () {
     mkdir(`${base}/profiles`);
     // Two real profile directories, and a plain file that claims a profile
     // name (which must NOT count as a profile).
-    mkdir(`${base}/profiles/zotero-hermes`);
+    mkdir(`${base}/profiles/logios`);
     mkdir(`${base}/profiles/enodios`);
     mkfile(`${base}/profiles/not-a-directory`);
 
@@ -83,7 +83,7 @@ describe("HermesProfile", function () {
       true,
     );
     expect(
-      rawFile(`${base}/profiles/zotero-hermes`).exists(),
+      rawFile(`${base}/profiles/logios`).exists(),
       "profile dir should exist",
     ).to.equal(true);
     expect(
@@ -178,9 +178,7 @@ describe("HermesProfile", function () {
     });
 
     it("returns the name when the profile exists", function () {
-      expect(resolveHermesProfile("logios", base)).to.equal(
-        "logios",
-      );
+      expect(resolveHermesProfile("logios", base)).to.equal("logios");
     });
 
     it("returns null for a configured name that does not exist", function () {
@@ -196,9 +194,7 @@ describe("HermesProfile", function () {
     });
 
     it("trims surrounding whitespace from a pasted name", function () {
-      expect(resolveHermesProfile("  logios  ", base)).to.equal(
-        "logios",
-      );
+      expect(resolveHermesProfile("  logios  ", base)).to.equal("logios");
     });
   });
 
@@ -215,7 +211,7 @@ describe("HermesProfile", function () {
     it("reports a profile when the name is valid and exists", function () {
       expect(resolveConfiguredProfile("logios", base)).to.deep.equal({
         kind: "profile",
-        name: "zotero-hermes",
+        name: "logios",
       });
     });
 
