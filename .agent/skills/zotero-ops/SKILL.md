@@ -53,13 +53,36 @@ npm version patch --no-git-tag-version     # package.json + package-lock.json
 #    promote CHANGELOG [Unreleased] -> [<ver>] — YYYY-MM-DD, then:
 npx prettier --write CHANGELOG.md          # whole-repo prettier is the gate
 
-# 2. gates (see Release Checklist) then commit + tag + push
+# 2. gates (see Release Checklist), then land the version commit.
+#    main is PROTECTED — required checks are build, lint, test — so the release
+#    commit lands through a PR. Do NOT push to main directly.
+git switch -c release/v<x.y.z>
 git commit -m "release: v<x.y.z>"
-git tag -a v<x.y.z> -m "Release v<x.y.z>"
-git push origin main && git push origin v<x.y.z>
-# 3. the tag push runs the release workflow — watch it
-gh run list --workflow=release.yml --limit 1
+git push -u origin release/v<x.y.z>
+gh pr create --base main --head release/v<x.y.z> \
+  --title "release: v<x.y.z>" --body-file /path/to/body.md
+gh pr checks <n> --watch --interval 15     # must be exit 0 on all three jobs
+gh pr merge <n> --merge
+
+# 3. tag the MERGE commit on main; the tag push runs the release workflow
+git switch main && git pull --ff-only origin main
+git tag -a v<x.y.z> -m "Release v<x.y.z>" && git push origin v<x.y.z>
+gh run watch <databaseId> --exit-status    # do not just fire the tag
 ```
+
+Two traps in that sequence, both silent:
+
+- **`gh pr create --body "$(cat <<'EOF' … EOF)"` fails** with
+  `bad substitution: no closing ')'` — the heredoc inside a command
+  substitution does not survive the shell wrapper. Write the body to a file and
+  pass `--body-file`.
+- **A PR can open with no checks attached.** Symptom: `gh pr checks <n>` reports
+  "no checks reported on the branch" and `gh run list --branch <head>` is empty,
+  while `gh pr view <n>` shows `mergeStateStatus: BLOCKED`. The
+  `pull_request` workflow never fired; push any further commit (an empty one
+  works) to fire `synchronize` and the checks appear. Merge is refused until the
+  required checks report on the head commit, so `--watch` on a checkless PR
+  exits non-zero immediately.
 
 **Do NOT run `gh release create` by hand.** The workflow creates the release
 itself; a pre-existing release makes it fail with
@@ -173,6 +196,23 @@ it before retrying.
 > Symptom: CI `lint` red on a file that passes locally. This bit Wave 2 Task 4:
 > a one-line wrap fixed during the _next_ task's lint step was committed only in
 > my working tree, so `ApprovalDialog.ts` failed CI while passing locally.
+>
+> **The mirror image is also real: local RED while CI is green.** A working copy
+> accumulates untracked scratch — `.opencode/`, `.superpowers/`, and
+> `.worktrees/` (which holds whole checkouts). `prettier --check .` walks all of
+> them, so `npm run lint:check` can report ~25 unformatted files that a clean
+> checkout, and therefore CI, has never seen. Do not reformat them and do not
+> treat the red as blocking; gate the scope CI actually checks:
+>
+> ```bash
+> printf '%s\n.opencode\n.superpowers\n.worktrees\n' "$(cat .prettierignore)" > /tmp/pi
+> npx prettier --check . --ignore-path /tmp/pi   # exit 0 == CI's verdict
+> npx eslint .                                    # eslint is unaffected
+> ```
+>
+> `git ls-files -z | xargs -0 npx prettier --check` is **not** a substitute:
+> given explicit paths, prettier errors on tracked `.ftl` files it has no parser
+> for, so it fails for the wrong reason.
 
 - [ ] Version bumped in package.json
       (`npm version <patch|minor|major> --no-git-tag-version` — pick the
