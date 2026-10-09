@@ -7,6 +7,7 @@ import {
   LockIcon,
   ExportIcon,
 } from "./Icons";
+import { isToolAllowed, toolChips } from "./toolPerms";
 
 export interface ConversationSummary {
   id: string;
@@ -24,6 +25,7 @@ interface SidePanelsProps {
   searchMatches: number[];
   currentMatchIndex: number;
   allowedTools: string[] | null;
+  availableCommands: Array<{ name: string; description: string }>;
   searchInputRef: React.RefObject<HTMLInputElement | null>;
   onLoadConversation: (id: string) => void;
   onDeleteConversation: (id: string) => void;
@@ -51,6 +53,7 @@ export const SidePanels: React.FC<SidePanelsProps> = ({
   searchMatches,
   currentMatchIndex,
   allowedTools,
+  availableCommands,
   searchInputRef,
   onLoadConversation,
   onDeleteConversation,
@@ -204,16 +207,14 @@ export const SidePanels: React.FC<SidePanelsProps> = ({
             </button>
           </div>
           <div>
-            {["read_file", "write_file", "terminal"].map((tool) => (
-              <label key={tool} className="hermes-session-tool-toggle">
+            {toolChips(availableCommands).map(({ name, label }) => (
+              <label key={name} className="hermes-session-tool-toggle">
                 <input
                   type="checkbox"
-                  checked={allowedTools === null || allowedTools.includes(tool)}
-                  onChange={(e) => onToggleTool(tool, e.target.checked)}
+                  checked={isToolAllowed(allowedTools, name)}
+                  onChange={(e) => onToggleTool(name, e.target.checked)}
                 />
-                {tool === "read_file" && "Read Files"}
-                {tool === "write_file" && "Write Files"}
-                {tool === "terminal" && "Terminal Commands"}
+                {label}
               </label>
             ))}
           </div>

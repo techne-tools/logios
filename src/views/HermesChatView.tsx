@@ -15,6 +15,11 @@ import { MessageList } from "./components/MessageList";
 import { SidePanels, ConversationSummary } from "./components/SidePanels";
 import { ChatMessage, ContextItem } from "./types";
 import {
+  resolveAllowedTools,
+  toggleTool,
+  toolChips,
+} from "./components/toolPerms";
+import {
   parseSlashCommand,
   getSlashCommands,
 } from "../modules/hermes/SlashCommands";
@@ -71,6 +76,9 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
   const [error, setError] = useState<string | null>(null);
   const [contextItems, setContextItems] = useState<ContextItem[]>([]);
   const [allowedTools, setAllowedTools] = useState<string[] | null>(null);
+  const [availableCommands, setAvailableCommands] = useState<
+    Array<{ name: string; description: string }>
+  >([]);
   const [isConversationListOpen, setIsConversationListOpen] = useState(false);
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -778,6 +786,14 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
         // resets both refs on the next send.
         flushNow();
         setIsTyping(false);
+      } else if (
+        update.type === "available_commands" &&
+        update.availableCommands
+      ) {
+        // The agent advertises the tools it can call; the permission chips are
+        // built from this list (falling back to the three known tools until it
+        // arrives).
+        setAvailableCommands(update.availableCommands);
       } else if (update.type === "error") {
         flushNow();
         const cleaned = stripAnsi(update.content || "").trim();
@@ -1100,7 +1116,7 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
         setError(null);
         // M8: restore the conversation's tool restriction state (null =
         // unrestricted, array = restricted list, [] = block all).
-        setAllowedTools(conv.allowedTools ?? null);
+        setAllowedTools(resolveAllowedTools(conv.allowedTools));
         hermes.chat.loadFromConversation(conv);
         setIsConversationListOpen(false);
       }
@@ -1334,6 +1350,7 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
         searchMatches={searchMatches}
         currentMatchIndex={currentMatchIndex}
         allowedTools={allowedTools}
+        availableCommands={availableCommands}
         searchInputRef={searchInputRef}
         onLoadConversation={handleLoadConversation}
         onDeleteConversation={handleDeleteConversation}
@@ -1363,16 +1380,8 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
         onAllowAllTools={() => setAllowedTools(null)}
         onBlockAllTools={() => setAllowedTools([])}
         onToggleTool={(tool, checked) => {
-          const current = allowedTools ?? [
-            "read_file",
-            "write_file",
-            "terminal",
-          ];
-          if (checked) {
-            setAllowedTools([...current, tool]);
-          } else {
-            setAllowedTools(current.filter((t) => t !== tool));
-          }
+          const allTools = toolChips(availableCommands).map((c) => c.name);
+          setAllowedTools(toggleTool(allowedTools, tool, checked, allTools));
         }}
         onCloseSessionSettings={() => setIsSessionSettingsOpen(false)}
         onDismissOnboarding={() => {
