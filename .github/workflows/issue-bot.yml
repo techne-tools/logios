@@ -17,4 +17,4 @@ permissions:
 
 jobs:
   issue-bot:
-    uses: techne-tools/zotero-plugin-workflows/.github/workflows/issue-bot.yml@v1.1.0-techne.1
+    uses: techne-tools/zotero-plugin-workflows/.github/workflows/issue-bot.yml@v1.1.0
