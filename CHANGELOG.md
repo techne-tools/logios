@@ -23,6 +23,15 @@ All notable changes to this project are documented in this file.
   `prefs-table-*`, `tabpanel-*`, `item-section-example*`,
   `item-info-row-example-label`) and the Chinese strings that still described a
   plugin template. No code referenced them.
+- **New addon icon.** `addon/content/icons/favicon.png` and `favicon@0.5x.png`
+  were the template's artwork, byte for byte, and are user-visible (manifest
+  icons and the toolkit's progress-window icon). Replaced with a lambda mark —
+  Hermes Logios, "of the word" — knocked out of the plugin's accent colour
+  (`#0b6b54`), so it reads on Zotero's light and dark themes. Geometry, if the
+  PNGs ever need regenerating: accent plate with 22% corner radius, glyph apex
+  at (0.31, 0.21), main stroke to (0.69, 0.79), branch leaving at 38% along the
+  main stroke and falling to (0.29, 0.79), stroke width 10% of the canvas (13%
+  at 16 px), 8x supersampled.
 
 ## [0.7.0] — 2026-10-09
 
