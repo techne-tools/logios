@@ -410,6 +410,4 @@ Cette section montre la structure des répertoires d'un modèle.
 
 ## Clause de non-responsabilité
 
-Utilisez ce code sous AGPL. Aucune garantie n'est fournie. Gardez à l'esprit les lois de votre pays !
-
-Si vous souhaitez modifier la licence, veuillez me contacter à l'adresse suivante : <wyzlshx@foxmail.com>
+Utilisez ce code sous licence MIT — voir [LICENSE](../LICENSE). Aucune garantie n'est fournie. Gardez à l'esprit les lois de votre pays !

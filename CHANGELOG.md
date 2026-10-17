@@ -4,6 +4,14 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- **The `LICENSE` file is MIT, matching what the project already declared.** It
+  carried the AGPL-3.0 text inherited from the Zotero plugin template while
+  `package.json` and `README.md` both said MIT, and the README translations under
+  `doc/` repeated the template's AGPL sentence and the template author's contact
+  address. All three now agree on MIT.
+
 ## [0.7.0] — 2026-10-09
 
 ### Added
