@@ -1,11 +1,3 @@
 startup-begin = Hermes Agent is loading
 startup-finish = Hermes Agent is ready
-menuitem-label = Hermes Agent: Helper Examples
-menupopup-label = Hermes Agent: Menupopup
-menuitem-submenulabel = Hermes Agent
-menuitem-filemenulabel = Hermes Agent: File Menuitem
 prefs-title = Hermes Agent
-prefs-table-title = Title
-prefs-table-detail = Detail
-tabpanel-lib-tab-label = Lib Tab
-tabpanel-reader-tab-label = Reader Tab

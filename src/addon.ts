@@ -4,12 +4,28 @@ import hooks from "./hooks";
 import { createZToolkit } from "./utils/ztoolkit";
 
 class Addon {
+  /** Lifecycle callbacks the bootstrap wires up. */
+  public hooks: typeof hooks;
+  /** Surface for anything the plugin wants to expose outside its own modules. */
+  public api: object;
+
   public data: {
     alive: boolean;
     config: typeof config;
     env: "development" | "production";
     initialized?: boolean;
+    /** Rebuilt per window on load; see hooks.onMainWindowLoad. */
     ztoolkit: ZToolkit;
+    locale?: {
+      current: any;
+    };
+    prefs?: {
+      window: Window;
+      columns: Array<ColumnOptions>;
+      rows: Array<{ [dataKey: string]: string }>;
+    };
+    dialog?: DialogHelper;
+    /** Hermes subsystem, attached by onStartup. */
     hermes?: {
       client:
         | import("./modules/hermes/HermesClient").HermesClient
@@ -28,20 +44,11 @@ class Addon {
       auditLog: import("./utils/AuditLog").AuditLog;
       exports: import("./modules/hermes/ExportManager").ExportManager;
     };
-    locale?: {
-      current: any;
-    };
-    prefs?: {
-      window: Window;
-      columns: Array<ColumnOptions>;
-      rows: Array<{ [dataKey: string]: string }>;
-    };
-    dialog?: DialogHelper;
   };
-  public hooks: typeof hooks;
-  public api: object;
 
   constructor() {
+    this.hooks = hooks;
+    this.api = {};
     this.data = {
       alive: true,
       config,
@@ -49,10 +56,9 @@ class Addon {
       initialized: false,
       ztoolkit: createZToolkit(),
     };
-    this.hooks = hooks;
-    this.api = {};
   }
 
+  /** Debug output, prefixed so it is greppable in Zotero's debug log. */
   public log(message: string, ...data: any[]): void {
     const line = `[Hermes] ${message}`;
     Zotero.debug(line);

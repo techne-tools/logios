@@ -645,43 +645,43 @@ function unregisterHermesSidebar(win: Window): void {
 const windowToolkits = new WeakMap<Window, any>();
 
 async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
-  // Create ztoolkit for this window and store in per-window WeakMap
+  // One toolkit per window: it holds window-scoped element references, so a
+  // single shared instance would keep the first window's DOM alive in the rest.
   const ztoolkit = createZToolkit();
   windowToolkits.set(win, ztoolkit);
   addon.data.ztoolkit = ztoolkit;
 
-  // Initialize locale for this window
   initLocale();
-
   win.MozXULElement.insertFTLIfNeeded(
     `${addon.data.config.addonRef}-mainWindow.ftl`,
   );
 
-  const popupWin = new ztoolkit.ProgressWindow(addon.data.config.addonName, {
-    closeOnClick: true,
+  // Startup progress window. `closeTime: -1` keeps it open until we close it.
+  const progress = new ztoolkit.ProgressWindow(addon.data.config.addonName, {
     closeTime: -1,
+    closeOnClick: true,
   })
     .createLine({
-      text: getString("startup-begin"),
       type: "default",
+      text: getString("startup-begin"),
       progress: 0,
     })
     .show();
 
   await Zotero.Promise.delay(100);
-  popupWin.changeLine({
-    progress: 30,
+  progress.changeLine({
     text: `[30%] ${getString("startup-begin")}`,
+    progress: 30,
   });
 
-  // Only essential UI setup
   UIExampleFactory.registerStyleSheet(win);
 
-  // Register full-height sidebar and toolbar button
+  // Full-height sidebar and toolbar button.
   registerHermesSidebar(win);
 
-  // Register supported context-menu / reader integrations after the
-  // window is ready, so Zotero.MenuManager and Zotero.Reader exist.
+  // Context-menu and reader integrations can only be registered once
+  // Zotero.MenuManager and Zotero.Reader exist, which is after the window has
+  // settled — hence the delay.
   Zotero.Promise.delay(300).then(() => {
     try {
       registerItemContextMenu();
@@ -694,16 +694,16 @@ async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
   });
 
   await Zotero.Promise.delay(100);
-
-  popupWin.changeLine({
-    progress: 100,
+  progress.changeLine({
     text: `[100%] ${getString("startup-finish")}`,
+    progress: 100,
   });
-  popupWin.startCloseTimer(5000);
+  progress.startCloseTimer(5000);
 }
 
 async function onMainWindowUnload(win: Window): Promise<void> {
   unregisterHermesSidebar(win);
+
   const winToolkit = windowToolkits.get(win);
   if (winToolkit) {
     winToolkit.unregisterAll();
@@ -711,6 +711,7 @@ async function onMainWindowUnload(win: Window): Promise<void> {
   } else {
     addon.data.ztoolkit?.unregisterAll();
   }
+
   addon.data.dialog?.window?.close();
 }
 
@@ -748,19 +749,20 @@ function onShutdown(): void {
 
   addon.data.ztoolkit?.unregisterAll();
   addon.data.dialog?.window?.close();
-  // Remove addon object
+
+  // Drop the instance so a reload starts from a clean Zotero global.
   addon.data.alive = false;
   // @ts-expect-error - Plugin instance is not typed
   delete Zotero[addon.data.config.addonInstance];
 }
 
 /**
- * Handle notify events.
+ * Zotero notification hook.
  *
- * The plugin does not currently subscribe to Zotero item/collection
- * notifications — the chat UI reads state on demand. Keep this hook
- * registered (the scaffold requires it) but do not log every event;
- * that produces noise on every item change in the library.
+ * Deliberately inert: the chat UI reads library state on demand, so
+ * subscribing here would fire (and log) on every item change for no gain. If
+ * item-change reactivity is ever wanted, dispatch it from here rather than
+ * adding a second observer.
  */
 async function onNotify(
   event: string,
@@ -768,8 +770,6 @@ async function onNotify(
   ids: Array<string | number>,
   extraData: { [key: string]: any },
 ) {
-  // No-op: notifications are intentionally not handled yet.
-  // If item-change reactivity is added later, dispatch here.
   void event;
   void type;
   void ids;

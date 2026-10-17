@@ -3,42 +3,36 @@ import { FluentMessageId } from "../../typings/i10n";
 
 export { initLocale, getString };
 
+const FTL_FILES = [`${config.addonRef}-addon.ftl`];
+
 /**
- * Initialize locale data
+ * Point `addon.data.locale` at this addon's Fluent bundle. Called once per
+ * window load, because the bundle is window-scoped.
  */
 function initLocale() {
-  const l10n = new (
+  const LocalizationConstructor =
     typeof Localization === "undefined"
       ? addon.data.ztoolkit.getGlobal("Localization")
-      : Localization
-  )([`${config.addonRef}-addon.ftl`], true);
+      : Localization;
+
   addon.data.locale = {
-    current: l10n,
+    current: new LocalizationConstructor(FTL_FILES, true),
   };
 }
 
 /**
- * Get locale string, see https://firefox-source-docs.mozilla.org/l10n/fluent/tutorial.html#fluent-translation-list-ftl
- * @param localString ftl key
- * @param options.branch branch name
- * @param options.args args
- * @example
- * ```ftl
- * # addon.ftl
- * addon-static-example = This is default branch!
- *     .branch-example = This is a branch under addon-static-example!
- * addon-dynamic-example =
-    { $count ->
-        [one] I have { $count } apple
-       *[other] I have { $count } apples
-    }
- * ```
+ * Look up a Fluent message by its key.
+ *
+ * A two-argument call may pass either a branch name or an options object:
+ *
  * ```js
- * getString("addon-static-example"); // This is default branch!
- * getString("addon-static-example", { branch: "branch-example" }); // This is a branch under addon-static-example!
- * getString("addon-dynamic-example", { args: { count: 1 } }); // I have 1 apple
- * getString("addon-dynamic-example", { args: { count: 2 } }); // I have 2 apples
+ * getString("pref-title");
+ * getString("pref-title", "label");
+ * getString("pref-title", { args: { count: 2 } });
  * ```
+ *
+ * A key with no matching message returns the prefixed key itself, so a
+ * missing translation shows up in the UI instead of rendering blank.
  */
 function getString(localString: FluentMessageId): string;
 function getString(localString: FluentMessageId, branch: string): string;
@@ -48,16 +42,14 @@ function getString(
 ): string;
 function getString(...inputs: any[]) {
   if (inputs.length === 1) {
-    return _getString(inputs[0]);
-  } else if (inputs.length === 2) {
-    if (typeof inputs[1] === "string") {
-      return _getString(inputs[0], { branch: inputs[1] });
-    } else {
-      return _getString(inputs[0], inputs[1]);
-    }
-  } else {
-    throw new Error("Invalid arguments");
+    return resolveString(inputs[0]);
   }
+  if (inputs.length === 2) {
+    return typeof inputs[1] === "string"
+      ? resolveString(inputs[0], { branch: inputs[1] })
+      : resolveString(inputs[0], inputs[1]);
+  }
+  throw new Error("Invalid arguments");
 }
 
 interface Pattern {
@@ -68,29 +60,26 @@ interface Pattern {
   }> | null;
 }
 
-function _getString(
+function resolveString(
   localeString: FluentMessageId,
   options: { branch?: string | undefined; args?: Record<string, unknown> } = {},
 ): string {
-  const localStringWithPrefix = `${config.addonRef}-${localeString}`;
   const { branch, args } = options;
+  const messageId = `${config.addonRef}-${localeString}`;
   const pattern = addon.data.locale?.current.formatMessagesSync([
-    { id: localStringWithPrefix, args },
-  ])[0] as Pattern;
+    { id: messageId, args },
+  ])[0] as Pattern | undefined;
 
   if (!pattern) {
-    return localStringWithPrefix;
+    return messageId;
   }
+
   if (branch && pattern.attributes) {
     return (
       pattern.attributes.find((attr) => attr.name === branch)?.value ||
-      localStringWithPrefix
+      messageId
     );
-  } else {
-    return pattern.value || localStringWithPrefix;
   }
-}
 
-function getLocaleID(id: FluentMessageId) {
-  return `${config.addonRef}-${id}`;
+  return pattern.value || messageId;
 }
