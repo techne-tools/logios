@@ -405,6 +405,4 @@ Zotero 文档已过时且不完整，克隆 <https://github.com/zotero/zotero> �
 
 ## Disclaimer 免责声明
 
-在 AGPL 下使用此代码。不提供任何保证。遵守你所在地区的法律！
-
-如果你想更改许可，请通过 <wyzlshx@foxmail.com> 与我联系。
+在 MIT 许可下使用此代码，参见 [LICENSE](../LICENSE)。不提供任何保证。遵守你所在地区的法律！
