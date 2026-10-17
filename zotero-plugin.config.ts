@@ -1,6 +1,10 @@
 import { defineConfig } from "zotero-plugin-scaffold";
 import pkg from "./package.json";
 
+// Build and release configuration for zotero-plugin-scaffold.
+//
+// The update manifest is versioned: a prerelease publishes update-beta.json, so
+// a beta can never overwrite the manifest that stable installs read.
 export default defineConfig({
   source: ["src", "addon"],
   dist: ".scaffold/build",
@@ -43,6 +47,6 @@ export default defineConfig({
     waitForPlugin: `() => Zotero.${pkg.config.addonInstance}.data.initialized`,
   },
 
-  // If you need to see a more detailed log, uncomment the following line:
+  // Uncomment to see the scaffold's own trace output while debugging a build.
   // logLevel: "trace",
 });

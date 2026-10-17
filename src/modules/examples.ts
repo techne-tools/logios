@@ -1,28 +1,20 @@
 /**
- * Minimal examples module - only essential code kept
- * All template example factories removed to reduce bloat
+ * The UI pieces the plugin actually uses. The template shipped a set of
+ * example factories (notifiers, keyboard shortcuts, command palette, dialogs);
+ * none of them are in use here, so only the stylesheet hook remains.
  */
 
 export class UIExampleFactory {
-  /**
-   * Register stylesheet for the main window
-   * This is the only example method still in use
-   */
+  /** Attach the addon stylesheet to a window. */
   static registerStyleSheet(win: _ZoteroTypes.MainWindow) {
     const doc = win.document;
-    const styles = ztoolkit.UI.createElement(doc, "link", {
+    const stylesheet = ztoolkit.UI.createElement(doc, "link", {
       properties: {
-        type: "text/css",
         rel: "stylesheet",
+        type: "text/css",
         href: `chrome://${addon.data.config.addonRef}/content/zoteroPane.css`,
       },
     });
-    doc.documentElement?.appendChild(styles);
+    doc.documentElement?.appendChild(stylesheet);
   }
 }
-
-// All other example factories removed:
-// - BasicExampleFactory (notifier, prefs - not used)
-// - KeyExampleFactory (keyboard shortcuts - not used)
-// - PromptExampleFactory (command palette - not used)
-// - HelperExampleFactory (dialog helpers - not used)

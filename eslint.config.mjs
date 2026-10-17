@@ -8,8 +8,9 @@ export default [
       {
         files: ["**/*.ts"],
         rules: {
-          // We disable this rule here because the template
-          // contains some unused examples and variables
+          // Zotero sandbox globals (`addon`, `ztoolkit`, `_globalThis`) are
+          // declared, not imported, and some hooks take arguments that the
+          // plugin deliberately ignores.
           "@typescript-eslint/no-unused-vars": "off",
         },
       },

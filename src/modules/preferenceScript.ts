@@ -6,15 +6,11 @@ import { SecretVault } from "../utils/SecretVault";
  * Called when the Zotero preferences pane is opened.
  */
 export async function registerPrefsScripts(_window: Window) {
-  if (!addon.data.prefs) {
-    addon.data.prefs = {
-      window: _window,
-      columns: [],
-      rows: [],
-    };
-  } else {
-    addon.data.prefs.window = _window;
-  }
+  // One prefs holder for the pane's window; the columns/rows fields are part
+  // of the addon data shape and are unused by this pane.
+  addon.data.prefs ??= { window: _window, columns: [], rows: [] };
+  addon.data.prefs.window = _window;
+
   bindPrefEvents();
   updateConnectionModeUI();
 }

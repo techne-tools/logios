@@ -4,28 +4,29 @@ import { config } from "../../package.json";
 export { createZToolkit };
 
 function createZToolkit() {
-  const _ztoolkit = new ZoteroToolkit();
-  /**
-   * Alternatively, import toolkit modules you use to minify the plugin size.
-   * You can add the modules under the `MyToolkit` class below and uncomment the following line.
-   */
-  // const _ztoolkit = new MyToolkit();
-  initZToolkit(_ztoolkit);
-  return _ztoolkit;
+  const toolkit = new ZoteroToolkit();
+  applyToolkitConfig(toolkit);
+  return toolkit;
 }
 
-function initZToolkit(_ztoolkit: ReturnType<typeof createZToolkit>) {
-  const env = __env__;
-  _ztoolkit.basicOptions.log.prefix = `[${config.addonName}]`;
-  _ztoolkit.basicOptions.log.disableConsole = env === "production";
-  _ztoolkit.UI.basicOptions.ui.enableElementJSONLog = __env__ === "development";
-  _ztoolkit.UI.basicOptions.ui.enableElementDOMLog = __env__ === "development";
-  // Getting basicOptions.debug will load global modules like the debug bridge.
-  // since we want to deprecate it, should avoid using it unless necessary.
-  // _ztoolkit.basicOptions.debug.disableDebugBridgePassword =
-  //   __env__ === "development";
-  _ztoolkit.basicOptions.api.pluginID = config.addonID;
-  _ztoolkit.ProgressWindow.setIconURI(
+/**
+ * Configuration for a fresh toolkit instance.
+ *
+ * `basicOptions.debug` is deliberately left alone: reading it drags in the
+ * debug bridge, which is deprecated and not worth loading in production.
+ */
+function applyToolkitConfig(toolkit: ReturnType<typeof createZToolkit>) {
+  const development = __env__ === "development";
+
+  toolkit.basicOptions.log.prefix = `[${config.addonName}]`;
+  toolkit.basicOptions.log.disableConsole = !development;
+  toolkit.basicOptions.api.pluginID = config.addonID;
+
+  // Element logging is noise outside development.
+  toolkit.UI.basicOptions.ui.enableElementJSONLog = development;
+  toolkit.UI.basicOptions.ui.enableElementDOMLog = development;
+
+  toolkit.ProgressWindow.setIconURI(
     "default",
     `chrome://${config.addonRef}/content/icons/favicon.png`,
   );

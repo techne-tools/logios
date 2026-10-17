@@ -11,6 +11,18 @@ All notable changes to this project are documented in this file.
   `package.json` and `README.md` both said MIT, and the README translations under
   `doc/` repeated the template's AGPL sentence and the template author's contact
   address. All three now agree on MIT.
+- **Template-derived code, comments and documentation removed.** The files
+  carried over from `zotero-plugin-template` (AGPL-3.0) — `addon/bootstrap.js`,
+  `src/index.ts`, `src/addon.ts`, `src/utils/{locale,ztoolkit}.ts`, the hook
+  boilerplate in `src/hooks.ts`, `.env.example`, the workflow/config comments,
+  the editor snippets and the two translated copies of the template README —
+  have been rewritten as this project's own code. Behaviour is unchanged; what
+  remains identical to upstream is API-mandated (type declarations, manifest
+  and config keys, CI workflow skeleton).
+- Removed the template's unused example locale keys (`menuitem-*`,
+  `prefs-table-*`, `tabpanel-*`, `item-section-example*`,
+  `item-info-row-example-label`) and the Chinese strings that still described a
+  plugin template. No code referenced them.
 
 ## [0.7.0] — 2026-10-09
 
