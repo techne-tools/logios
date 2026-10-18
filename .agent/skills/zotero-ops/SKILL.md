@@ -410,12 +410,17 @@ value carries the `sha512:` prefix, so neither side is compared verbatim.
 - [ ] For a pre-release: `update-beta.json` carries the new version, and
       `update.json` — if present — still carries the last stable version
 
-**Verified 2026-10-09 for v0.7.0** — stable channel; `release` tag carries
-`update-beta.json` + `update.json`; both return HTTP 200 and advertise `0.7.0`,
-and the advertised `update_hash` matches the `logios.xpi` published on the
-`v0.7.0` tag. The published tag and `release`-tag manifests differ in
-`update_hash` (the workflow rebuilds), so always re-run the hash check after a
-release rather than trusting the local build's hash.
+**Verified 2026-10-18 for v0.7.1** — stable channel; `release` tag carries
+`update-beta.json` + `update.json`; `update.json` returns HTTP 200 and
+advertises `0.7.1` (`update-beta.json` does too), and the advertised
+`update_hash` (`sha512:629a63ba…`) matches the `logios.xpi` published on the
+`v0.7.1` tag. The published tag and `release`-tag manifests differ in
+`update_hash` (the workflow rebuilds — local build was `e42e1bc7…`, published
+`629a63ba…`), so always re-run the hash check after a release rather than
+trusting the local build's hash.
+
+Prior verification, 2026-10-09 for v0.7.0: same shape, both manifests returning
+HTTP 200 and advertising `0.7.0`.
 
 ## Testing Strategy
 
