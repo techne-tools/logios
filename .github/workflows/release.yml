@@ -1,20 +1,29 @@
 name: Release
 
+# Tag-driven, and only tag-driven: pushing a `v*` tag is the one action that
+# publishes. The run builds the XPI, creates the GitHub release, rewrites the
+# manifests on the rolling `release` tag and comments on the merged PR. Do not
+# run `gh release create` by hand — a release that already exists makes this
+# fail with 422 already_exists.
 on:
   push:
-    tags:
-      - v**
+    tags: ["v**"]
 
+# The reusable workflow creates the release, writes the update manifests and
+# comments on the merged PR, so it needs these three scopes.
 permissions:
   contents: write
   issues: write
   pull-requests: write
 
 jobs:
-  create-release:
+  publish:
     uses: techne-tools/zotero-plugin-workflows/.github/workflows/release-plugin.yml@v1.1.0
-    # You can customize any of the inputs here.
-    # If you omit an input, its default value will be used.
+    # Both commands are named explicitly instead of taking the reusable
+    # workflow's defaults: they are the same two scripts the release checklist
+    # gates locally — `zotero-plugin build` with a source typecheck, then
+    # `zotero-plugin release` to create the release and its manifests. A tag is
+    # only cut after both are green on the merge commit.
     with:
       build: "npm run build"
       release: "npm run release"

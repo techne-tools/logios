@@ -4,6 +4,17 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- **The workflows are this project's own.** `ci.yml`, `release.yml` and
+  `issue-bot.yml` were still the Zotero plugin template's files (AGPL-3.0) with
+  a single line swapped for our reusable workflow — 87–95% of their lines were
+  upstream — and `release.yml` carried two of the template's comments verbatim.
+  Same triggers, jobs, commands, scopes and step order; the comments and step
+  names are rewritten, and the job ids now say what they do (`create-release` →
+  `publish`, `issue-bot` → `triage`). The `ci.yml` ids stay `build`, `lint` and
+  `test`, because branch protection on `main` requires those exact check names.
+
 ## [0.7.1] — 2026-10-18
 
 ### Changed
