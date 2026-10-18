@@ -1,14 +1,20 @@
 name: Issue Bot
 
+# A label on an issue, a new issue comment, or the nightly sweep. The sweep runs
+# because a label applied while the workflow was disabled — or an issue opened
+# straight into a handled state — would otherwise wait for someone to comment
+# before any triage happened.
+#
+# The job id is ours; nothing references it by name.
 on:
   issues:
-    types:
-      - labeled
+    types: [labeled]
   issue_comment:
-    types:
-      - created
+    types: [created]
   schedule:
+    # 01:30 UTC daily — a quiet hour for the repositories it reads.
     - cron: "30 1 * * *"
+  # Kept so a stuck issue can be re-triaged by hand without faking an event.
   workflow_dispatch:
 
 permissions:
@@ -16,5 +22,5 @@ permissions:
   pull-requests: write
 
 jobs:
-  issue-bot:
+  triage:
     uses: techne-tools/zotero-plugin-workflows/.github/workflows/issue-bot.yml@v1.1.0

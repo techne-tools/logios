@@ -1,22 +1,31 @@
 name: CI
 
+# Three jobs rather than one, because the release checklist treats build, lint
+# and the Zotero suite as separate verdicts: a green build says nothing about
+# formatting or about the tests, and all three are required checks on main.
+#
+# The step names are our own. The job ids are not free to change — branch
+# protection on main requires checks named exactly `build`, `lint` and `test`,
+# so renaming a job would silently stop it from gating anything.
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
   lint:
     runs-on: ubuntu-latest
     env:
+      # Raised API limits for the install step, which fetches a lot of packages.
       GITHUB_TOKEN: ${{ secrets.GitHub_TOKEN }}
     steps:
-      - name: Setup JS
+      - name: Install Node, dependencies and caching
         uses: techne-tools/zotero-plugin-workflows/setup-js@v1.1.0
-      - name: Run Lint
+      # Whole-repo scope on purpose: prettier walks every tracked file and eslint
+      # the whole tree, which is stricter than a src-only check and is the same
+      # gate the release checklist runs locally.
+      - name: Formatting and lint gates
         run: npm run lint:check
 
   build:
@@ -24,13 +33,18 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ secrets.GitHub_TOKEN }}
     steps:
-      - name: Setup JS
+      - name: Install Node, dependencies and caching
         uses: techne-tools/zotero-plugin-workflows/setup-js@v1.1.0
-      - name: Run Build
+      # One script, because the XPI can be produced from source that does not
+      # typecheck: the bundle step runs first, then tsc --noEmit.
+      - name: Build the plugin and typecheck the source
         run: npm run build
-      - name: Typecheck test/
+      # test/ has its own tsconfig, so the source typecheck cannot see it.
+      - name: Typecheck the test suite
         run: npm run typecheck:test
-      - name: Upload build result
+      # Kept for inspection: the XPI in .scaffold/build is what a published
+      # artefact gets compared against when a release misbehaves.
+      - name: Keep the built plugin as an artifact
         uses: actions/upload-artifact@v7
         with:
           name: build-result
@@ -38,9 +52,13 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
-    needs:
-      - build
+    # The suite loads the installed addon, and the build job proves it compiles
+    # before a runner is spent starting a headless Zotero.
+    needs: [build]
     steps:
-      - name: Setup JS
+      - name: Install Node, dependencies and caching
         uses: techne-tools/zotero-plugin-workflows/setup-js@v1.1.0
-      - run: npm run test
+      # Runs the plugin inside a headless Zotero under Xvfb. In CI the runner
+      # process exits on its own, so no --no-watch flag is needed here.
+      - name: Run the Zotero test suite
+        run: npm run test
