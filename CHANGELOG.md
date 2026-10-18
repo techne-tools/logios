@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [0.7.1] — 2026-10-18
+
 ### Changed
 
 - **The `LICENSE` file is MIT, matching what the project already declared.** It
