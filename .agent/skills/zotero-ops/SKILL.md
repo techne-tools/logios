@@ -342,8 +342,8 @@ updateURL: `https://github.com/{{owner}}/{{repo}}/releases/download/release/${
 }`,
 ```
 
-- `0.7.0` → `update.json` (stable)
-- `0.7.0-beta.1`, `1.0.0-rc.2` → `update-beta.json` (pre-release)
+- `0.7.1` → `update.json` (stable)
+- `0.7.1-beta.1`, `1.0.0-rc.2` → `update-beta.json` (pre-release)
 
 **Which manifests a release publishes.** Verified against the scaffold
 (`zotero-plugin-scaffold/dist/shared/scaffold-src-*.mjs`): `update-beta.json` is

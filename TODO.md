@@ -1,8 +1,8 @@
 # Logios Plugin — Full Rework TODO
 
 **Created:** 21 May 2026  
-**Updated:** 9 October 2026  
-**Current Version:** 0.7.0 (Stable)  
+**Updated:** 18 October 2026  
+**Current Version:** 0.7.1 (Stable)  
 **Platform:** Zotero 7.0–10.x (Mozilla 140 ESR)  
 **Status:** ✅ Core Infrastructure, UI Redesign, Security Hardening, Zotero 10 Compatibility & Library Operations Complete
 
